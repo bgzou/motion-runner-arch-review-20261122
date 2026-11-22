@@ -49,6 +49,8 @@
 
 **HTML 对照（重要）**：第 3 章与第 5 章另有独立 HTML 渲染版——[architecture/architecture-design.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/architecture-design.html)、[architecture/task-engine-and-state-machine.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.html)。它们保留了版式、表格与图，适合确认结构；但**正文论证以对应 `.md` 为权威文本**，不要只读 HTML 而漏掉 Markdown 中的证据与注释。
 
+**如果浏览能力/上下文受限**：至少读 `00_READ_ME_FIRST.md`、`02_CONTEXT_BRIEF.md`、`runner/runner-integration-master.md`、`architecture/architecture-design.md`、`system/motion-control-architecture-delivery.md` 这 5 份；在 Part 1 开头列出你实际读了哪些、没读哪些、对设计结论有什么影响。**不要假装读过**。
+
 **选读（需要时再打开）**：
 
 - 需求原文：[requirements/requirements-scenarios.txt](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/requirements/requirements-scenarios.txt)
