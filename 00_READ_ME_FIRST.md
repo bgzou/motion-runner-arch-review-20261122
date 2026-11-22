@@ -35,7 +35,7 @@
 
 ### 第一优先：总体架构与 Runner 主文档
 
-1. [architecture/architecture-design.md](architecture/architecture-design.md) — 第 3 章：大脑/小脑/平台三子系统职责划分、边界判据、场景协同。
+1. [architecture/architecture-design.md](architecture/architecture-design.md) — 第 3 章：大脑/小脑/平台三子系统职责划分、边界判据、场景协同。HTML 渲染版：[architecture-design.html](architecture/architecture-design.html)。
 2. [runner/runner-integration-master.md](runner/runner-integration-master.md) — 当前 Runner 主文档：边界、外部接口、`IRunner`/`ActionBundle`、逐拍链路、切换、配置、验收。
 3. [runner/runner-interface-and-dataflow.md](runner/runner-interface-and-dataflow.md) — 字段、tensor、obs/action 规格、golden fixture。
 4. [system/t1-architecture-deep-dive.md](system/t1-architecture-deep-dive.md) — T1 双板三机、频率金字塔、Runner、数据链路、安全（第 0/2/3/6/8/10 章）。

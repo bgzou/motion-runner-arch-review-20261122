@@ -47,6 +47,8 @@
 | 11 | [evidence/configs/mc_T1.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/mc_T1.yaml) + [evidence/configs/action_setting.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/action_setting.yaml) + [evidence/configs/action_ruler.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/action_ruler.yaml) | 真机话题/服务/速度源/执行组/切换边 |
 | 12 | [evidence/model-list/action-execution-runner.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/model-list/action-execution-runner.md) + [evidence/model-list/rule-graph-stats.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/model-list/rule-graph-stats.md) | 58/62/42/34/15、52 节点/197 边 |
 
+**HTML 对照（重要）**：第 3 章与第 5 章另有独立 HTML 渲染版——[architecture/architecture-design.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/architecture-design.html)、[architecture/task-engine-and-state-machine.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.html)。它们保留了版式、表格与图，适合确认结构；但**正文论证以对应 `.md` 为权威文本**，不要只读 HTML 而漏掉 Markdown 中的证据与注释。
+
 **选读（需要时再打开）**：
 
 - 需求原文：[requirements/requirements-scenarios.txt](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/requirements/requirements-scenarios.txt)
