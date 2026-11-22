@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="运控策略输入输出链路">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" page="1" pageScale="1" pageWidth="1600" pageHeight="900">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="task" value="任务/导航/跟随/运镜&#10;Action + 速度参考" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="95" width="195" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="manager" value="Policy / Runner Manager&#10;来源仲裁 + 切换状态" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="270" y="95" width="210" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="obs" value="观测适配&#10;时间戳·关节映射·缩放&#10;裁剪·历史帧" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="525" y="95" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="runner" value="IRunner 实例&#10;经典控制 / ONNX 推理&#10;过渡 / 恢复" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="775" y="95" width="195" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="post" value="输出适配&#10;控制模式·增益·所有权&#10;限幅·切换整形" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1015" y="95" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="device" value="唯一设备出口&#10;驱动 / 电机" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="1265" y="95" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback" value="关节 + IMU + 接触&#10;带时间戳的 RobotState" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="535" y="360" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="safety" value="常驻安全监督&#10;急停·跌倒·断流·越界" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="875" y="360" width="205" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="status" value="MotionStatus&#10;当前/目标·phase&#10;switch_ready·fault" style="rounded=1;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontSize=15;fontColor=#1f2937;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;spacing=8;" vertex="1" parent="1">
+          <mxGeometry x="180" y="360" width="215" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="task" target="manager">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="manager" target="obs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="obs" target="runner">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="runner" target="post">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="post" target="device">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="反馈" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="device" target="feedback">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1360" y="520" />
+              <mxPoint x="640" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e8" value="状态采样" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="feedback" target="obs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="安全观测" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="feedback" target="safety">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="抢占/安全输出" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="safety" target="post">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1125" y="400" />
+              <mxPoint x="1125" y="250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="阶段/结果" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#596579;strokeWidth=2;fontSize=12;fontColor=#374151;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="manager" target="status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

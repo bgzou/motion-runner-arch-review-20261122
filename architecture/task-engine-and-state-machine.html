@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 5 章 特性域 A：task 调度框架与状态机管理</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --ink: #1e293b; --muted: #64748b; --line: #e2e8f0; --accent: #2563eb;
+    --bg: #f8fafc; --card: #ffffff; --th: #eff6ff; --quote: #f0f9ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;
+         color: var(--ink); background: var(--bg); font-size: 15px; line-height: 1.75; }
+  .wrap { display: flex; max-width: 1280px; margin: 0 auto; gap: 24px; padding: 24px; }
+  nav.toc { width: 280px; flex-shrink: 0; position: sticky; top: 24px; align-self: flex-start;
+            max-height: calc(100vh - 48px); overflow-y: auto; background: var(--card);
+            border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  nav.toc .toc-title { font-weight: 700; font-size: 13px; color: var(--muted);
+                       letter-spacing: .08em; margin-bottom: 8px; }
+  nav.toc a { display: block; padding: 5px 10px; border-radius: 8px; font-size: 13.5px;
+              color: var(--ink); text-decoration: none; border-left: 3px solid transparent; }
+  nav.toc a:hover { background: var(--th); border-left-color: var(--accent); color: var(--accent); }
+  main { flex: 1; min-width: 0; }
+  header.cover { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fff;
+                 border-radius: 14px; padding: 36px 40px; margin-bottom: 20px; }
+  header.cover .doc-no { opacity: .85; font-size: 13px; letter-spacing: .12em; }
+  header.cover h1 { margin: 8px 0 6px; font-size: 27px; }
+  header.cover .sub { opacity: .9; font-size: 13.5px; }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+                 padding: 28px 32px; margin-bottom: 20px; }
+  h2 { margin: 0 0 14px; font-size: 21px; padding-bottom: 10px; border-bottom: 2px solid var(--th); }
+  h2::before { content: ""; display: inline-block; width: 6px; height: 18px; background: var(--accent);
+               border-radius: 3px; margin-right: 10px; vertical-align: -2px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: #0f172a; }
+  h4 { font-size: 15.5px; margin: 18px 0 8px; color: #1d4ed8; }
+  p { margin: 8px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13.5px;
+          display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--th); color: #1e3a8a; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fbfdff; }
+  code { background: #eef2f7; border-radius: 4px; padding: 1px 5px; font-size: 12.5px;
+         font-family: "JetBrains Mono",Consolas,monospace; }
+  pre.code { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 14px 16px;
+             overflow-x: auto; font-size: 12.5px; line-height: 1.6; }
+  pre.code code { background: none; color: inherit; padding: 0; }
+  blockquote { margin: 12px 0; padding: 10px 16px; background: var(--quote);
+               border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0; color: #334155; }
+  blockquote strong { color: #1e40af; }
+  figure.fig { margin: 16px 0; text-align: center; }
+  figure.fig svg { max-width: 100%; height: auto; background: #fff;
+                   border: 1px solid var(--line); border-radius: 10px; }
+  figure.fig figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .diagram { margin: 14px 0; padding: 14px; background: #fff; border: 1px solid var(--line);
+             border-radius: 10px; overflow-x: auto; text-align: center; }
+  .diagram .mermaid { display: flex; justify-content: center; }
+  hr { border: none; border-top: 1px dashed var(--line); margin: 18px 0; }
+  a { color: var(--accent); }
+  .mermaid { font-size: 14px; }
+  @media print {
+    nav.toc { display: none; }
+    .wrap { padding: 0; }
+    section.card { border: none; break-inside: avoid-page; page-break-after: always; }
+    header.cover { border-radius: 0; }
+    body { background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc"><div class="toc-title">目录 CONTENTS</div><a class="toc-item" href="#版本表">版本表</a><a class="toc-item" href="#5-1-特性域概述">5.1 特性域概述</a><a class="toc-item" href="#5-2-概念模型与术语">5.2 概念模型与术语</a><a class="toc-item" href="#5-3-需求与功能点">5.3 需求与功能点</a><a class="toc-item" href="#5-4-对标实证分析-启元-T1-Pro">5.4 对标实证分析（启元 T1 Pro）</a><a class="toc-item" href="#5-5-设计方案">5.5 设计方案</a><a class="toc-item" href="#5-6-关键机制设计">5.6 关键机制设计</a><a class="toc-item" href="#5-7-关键接口-关键模块间">5.7 关键接口（关键模块间）</a><a class="toc-item" href="#5-8-支撑设计">5.8 支撑设计</a><a class="toc-item" href="#5-9-核心业务流">5.9 核心业务流</a><a class="toc-item" href="#5-10-三方依赖">5.10 三方依赖</a><a class="toc-item" href="#5-11-功能-规格与工作量分析">5.11 功能、规格与工作量分析</a><a class="toc-item" href="#5-12-工作路标">5.12 工作路标</a><a class="toc-item" href="#5-13-关键设计决策记录-DD">5.13 关键设计决策记录（DD）</a><a class="toc-item" href="#5-14-验证与测试考虑">5.14 验证与测试考虑</a><a class="toc-item" href="#5-15-开放问题">5.15 开放问题</a><a class="toc-item" href="#5-16-对标证据引用清单">5.16 对标证据引用清单</a><a class="toc-item" href="#变更记录">变更记录</a></nav>
+<main>
+<header class="cover">
+  <div class="doc-no">QDOG-SFS-001 · 特性设计说明书 · 第 5 章</div>
+  <h1>特性域 A：task 调度框架与状态机管理</h1>
+  <div class="sub">域码 TS（Task scheduling &amp; State machine）· 对标：启元 T1 Pro · 生成自 task-engine-and-state-machine.md</div>
+</header>
+<section class="card" style="padding:20px 26px"><h1>第 5 章 特性域 A：task 调度框架与状态机管理</h1>
+<table>
+<tr><th>项</th><th>内容</th></tr>
+<tr><td>所属文档</td><td>QDOG-SFS-001《四足狗软件特性设计说明书》（见 <a href=\"./README.md\">README</a>）</td></tr>
+<tr><td>章节版本</td><td>V0.45（草案，2026-11-19；图内接口名改全称——task/request→/robot/task/request（叶名缩写易误读为 task 或 request），SVG/流程图/模块表同步）</td></tr>
+<tr><td>域码</td><td>TS（Task scheduling &amp; State machine）</td></tr>
+<tr><td>证据基线</td><td>启元 T1 Pro 固件 t2-3 / JetPack 540.4.0（EV 条目来源见 §5.16 与主控文档 §5）</td></tr>
+</table></section>
+<section class="card" id="版本表"><h2>版本表</h2>
+<table>
+<tr><th>版本</th><th>日期</th><th>变更摘要</th><th>作者</th></tr>
+<tr><td>V0.1</td><td>2026-11-10</td><td>首版：需求条目、T1 Pro 对标实证分析、设计方案、设计决策、验证考虑</td><td>liqiliang</td></tr>
+<tr><td>V0.2</td><td>2026-11-10</td><td>新增 §5.6 功能、规格与工作量分析；原 §5.6–5.9 顺延为 §5.7–5.10</td><td>liqiliang</td></tr>
+<tr><td>V0.3</td><td>2026-11-11</td><td>§5.6.3 对照表完善：列名「功能简称」改「功能名称」，新增「功能简介」列；参考实现列改为两行式（上行 T1 Pro 是否提供开源实现、下行业界开源实现），全部开源实现附仓库地址（地址均经在线核实）</td><td>liqiliang</td></tr>
+<tr><td>V0.4</td><td>2026-11-11</td><td>新增 §5.6.5 端到端场景走查（UC-A「跳舞中被跟随抢占」：时序图+T0~T4 拆解+两级仲裁明细+异常路径+功能出场反向索引）；§5.8 增设对应系统级用例</td><td>liqiliang</td></tr>
+<tr><td>V0.5</td><td>2026-11-11</td><td>显式化调度模型：新增 DD-TS-12（仲裁式调度、不设通用任务队列）、§5.6.2 排队语义受控局部清单、§5.6.5「调度器在哪里/有没有任务队列」澄清说明、OP-TS-08（ENQUEUE 预约执行裁决预留）</td><td>liqiliang</td></tr>
+<tr><td>V0.6</td><td>2026-11-13</td><td>§5.6.2 控制权租期补「续租窗口」语义（每帧续租可无限期；静默 1000ms=失联保护释放；正常结束显式 DELETE）</td><td>liqiliang</td></tr>
+<tr><td>V0.7</td><td>2026-11-17</td><td><strong>结构重构（依据 README 新模板）</strong>：① 新增 §5.5.2 逻辑视图（<strong>SVG</strong> figures/ts-logical-view.svg，图 5-1：4 个 TS 关键模块+5 类外域实体上下依赖分层）；② 新增 §5.9 核心业务流——流程一 UC-A 任务受理·两级仲裁·抢占（图 5-2 流程图+图 5-3 时序图，吸收原 §5.6.5 并补流程图）、流程二 系统状态迁移与模块激活（图 5-4/5-5，新增）；③ §5.7 关键接口表增「模块对」列（接口↔逻辑视图依赖边↔业务流调用序列三视图互校）；④ 新增 §5.10 三方依赖（基座复用/机制参照/工具 8 项+治理原则）；⑤ 原 5.5.3~5.5.8 → §5.6/§5.8，原 5.6→§5.11（5.6.5 并入 §5.9.1），原 5.7~5.10→§5.12~5.15；内部与跨文件引用全部同步</td><td>liqiliang</td></tr>
+<tr><td>V0.8</td><td>2026-11-17</td><td>① §5.5.2 标题去掉「（SVG）」后缀；② <strong>图 5-1 SVG 优化</strong>：边标签统一细字 10px+白晕（.lbl 样式），逐条与箭头对齐（垂直边标签贴线、斜边改正交折线、去除旋转文字），左走廊绕行 task_engine→执行器；③ <strong>scene_engine 正名「定时任务触发器」</strong>（T1 命名有迷惑性，EV-T1P-23）：逻辑视图 L1 增定时任务触发器框（标注 T1 名）、§5.5.3 交互图入口节点、FR-TS-01、§5.4.1.1、§5.6.2 排队语义④、IF-TS-01 模块对全量更新</td><td>liqiliang</td></tr>
+<tr><td>V0.9</td><td>2026-11-17</td><td><strong>scene_engine 彻底正名</strong>：正文与所有图表一律以「<strong>定时任务触发器</strong>」为主名，T1 原名仅保留在标注位（对标表〔T1 误名〕、EV-T1P-23 条目、逻辑视图/L1 表图注、mermaid 节点注记）与 B 类来源文件路径（事实性路径）；修订 8 处：§5.1 范围「自主触发」、FR-TS-01 去 T1 名、对标表行主名化、§5.4.1.1 入口句、「场景四义」②、状态词汇句、排队语义④、§5.11.3 入口网关行（含规格「语音/App/遥控/SDK/定时任务」）；SVG 副题改「T1 Pro 误名 scene_engine」</td><td>liqiliang</td></tr>
+<tr><td>V0.10</td><td>2026-11-17</td><td><strong>图内 scene_engine 字样清零</strong>：逻辑视图 SVG 副题改功能描述「定时/事件触发（schedule → Timer）」、§5.5.3 mermaid 入口节点注记改「（定时/事件触发）」、§5.5.2 L1 表 cell 去 T1 名——T1 名标注仅保留在正文标注位（对标表/EV 条目/§5.5.2 定义句）与来源路径</td><td>liqiliang</td></tr>
+<tr><td>V0.11</td><td>2026-11-17</td><td><strong>scene_manager → sys_guard 全量更名（18 处正文 + SVG 3 处）</strong>：依据——T1 Pro 无名为 scene_manager 的模块（资源场景功能全部内嵌 sys_guard，EV-T1P-20），该名系本设计自起且 scene- 前缀承袭 T1「场景四义」混淆；同步更名：IF-TS-10 接口 <code>/qdog/scene/*</code>→<code>/qdog/resource/*</code>、模块中文名「资源管理（资源场景）」、§5.6.3 节名、图内 SC 参与者/边标签（场景切换→资源切换）、§5.11.3/DD-TS-06 措辞；概念词「资源场景（Resource Scene）」保留</td><td>liqiliang</td></tr>
+<tr><td>V0.12</td><td>2026-11-17</td><td>① <strong>逻辑视图重构对齐三大子系统</strong>（architecture-design.md §3.6.1）：SVG 重画——底层软件平台（TS 4 关键模块+本体APP/OM/OS）、上左大脑（Agent+定时任务触发器）、上右小脑（技能执行器+mc 仲裁），依赖边与标注全面复核；正文分层表改按子系统组织；② <strong>工作量 ×5 冰山系数</strong>（§5.11.2 口径+§5.11.3 十三行+§5.11.4 汇总：全量 270~325 K LoC/52.5~55 人月）；③ <strong>新增 §5.12 工作路标</strong>（4 阶段 HTML 表：2026.11.30/12.31/2027.3.31/5.31，功能最小集叠加，关键路标列 rowspan 合并，工作量与 §5.11.3 对应）；原 §5.12~5.15 顺延为 §5.13~5.16</td><td>liqiliang</td></tr>
+<tr><td>V0.13</td><td>2026-11-17</td><td><strong>工作量口径统一为代码量</strong>：① §5.11.3 删除「工作量预估（人月）」列（13 行），§5.11.4 汇总去人月列（V1 约 190~240 K LoC/全量约 270~325 K LoC），配比建议/前三改为代码量表述；② §5.12 路标表「工作量」列统一改为<strong>代码量</strong>（与 §5.11.3 一一对应；阶段四测试行按 15~25 K LoC 拆 9~15 K LoC+6~10 K LoC）；③ §5.12 整体精简（去行号索引/冗余限定语/里程碑说明压缩为一行注记）</td><td>liqiliang</td></tr>
+<tr><td>V0.14</td><td>2026-11-17</td><td><strong>路标修正：任务运行时（最小版）调入阶段一</strong>——原阶段一闭环断在「受理」（task_id 分配/执行器下发/状态广播/收尾均无宿主），不满足「基本能跑起来」；修正后阶段一=单任务端到端（受理→执行→回报→完成播报，85~130 K LoC），阶段二=多任务冲突与治理（仲裁器+控制权+模块管理+进程守护；任务运行时完整化——并行白名单/取消限时传播/多域聚合/历史查询——并入仲裁器行联调）；四阶段叙事更新：单任务端到端→多任务治理→平台化→集成达标</td><td>liqiliang</td></tr>
+</table>
+</section>
+<section class="card" id="5-1-特性域概述"><h2>5.1 特性域概述</h2>
+<h3>5.1.1 范围</h3>
+<p>本章规定本产品软件平台的两个框架级特性域：</p>
+<ol><li><strong>task 调度框架</strong>：把语音、App、遥控器、SDK、定时任务触发器等多入口的异步请求，归一为统一的任务模型，完成前置门控、仲裁裁决、资源协调、生命周期管理与状态回报。覆盖：长任务（跟随、建图、导航、运镜…）、短动作（姿态切换、表演动作、移动步进）、后台任务（录音、录像、升级）。</li><li><strong>状态机管理</strong>：定义全系统的状态分层模型——系统级状态机（整机生命周期门控）、各业务域状态机（任务态/会话态/导航态…）、资源场景（横切的资源档位），以及统一的状态协议、迁移防护与可观测性。</li></ol>
+<p>不在本章范围：具体任务的算法行为（跟随策略、规划算法——归 NV/MC 章）、运动控制内部实时 FSM 的算法设计（归 MC 章，本章只约束其状态语义与接口）、进程守护细节（归 OM 章，本章只定义与模块生命周期的契约）。</p>
+<h3>5.1.2 价值与用户场景</h3>
+<table>
+<tr><th>干系人</th><th>场景（User Story）</th><th>价值</th></tr>
+<tr><td>用户</td><td>「跟着我」语音发起跟随时，App 立即点播视频；机器人选择跟随并告知 App「任务冲突」</td><td>多入口并发下行为可预期，不会「精神分裂」</td></tr>
+<tr><td>用户</td><td>电量 5% 时说「跳个舞」，机器人礼貌拒绝并说明原因</td><td>危险/不满足条件的请求被一致地拦截，且给出可读原因</td></tr>
+<tr><td>用户</td><td>遥控器接管瞬间，导航任务自动暂停并释放控制权</td><td>控制权抢占安全、及时</td></tr>
+<tr><td>用户</td><td>升级期间机器人不响应运动指令，升级失败自动回滚到可运行状态</td><td>全局状态门控保证升级/急停等特殊态的一致性</td></tr>
+<tr><td>开发者</td><td>新增「巡逻」任务类型：写一个规则文件 + 一个任务执行器，不改编排/仲裁框架代码</td><td>任务接入成本低、协议一致</td></tr>
+<tr><td>开发者/测试</td><td>任意时刻可查询整机状态、任务状态、历史迁移记录；离线回放状态序列排查问题</td><td>状态可观测、问题可定位</td></tr>
+<tr><td>产品/运营</td><td>待机功耗达标：无任务时自动进入省电场景，关非必要传感流</td><td>状态-资源联动直接兑现功耗指标</td></tr>
+</table>
+<h3>5.1.3 对标定位</h3>
+<p>T1 Pro 已量产验证了「任务引擎 + 系统状态机 + 输入源仲裁」三分治理的框架形态（§5.4）。本章的对标目的：<strong>继承其被验证的结构，修复其实证暴露的缺口</strong>（分散状态机重复维护、状态门控覆盖不全、场景与状态两张皮等，见 §5.4.2.4）。</p>
+</section>
+<section class="card" id="5-2-概念模型与术语"><h2>5.2 概念模型与术语</h2>
+<table>
+<tr><th>术语</th><th>定义</th></tr>
+<tr><td><strong>系统状态（System State，L0）</strong></td><td>整机生命周期所在的唯一权威状态（如 INIT/STANDBY/ACTIVE/OTA/E_STOP/…），由系统状态机持有；对全部业务请求具有门控效力</td></tr>
+<tr><td><strong>状态内状态（System Status）</strong></td><td>系统状态机内部的执行子状态（READY/MOVE/ROLLBACK/FALLBACK），表达「稳定驻留/正在迁移/正在回滚/异常降级」；迁移与回滚是 status 而非独立 state（对标 T1 Pro SystemStatus 五值，[EV-T1P-09]）</td></tr>
+<tr><td><strong>域状态机（Domain FSM，L1）</strong></td><td>各业务域自管的状态机（任务态、会话态、导航态、运动形态/动作态…），域内权威，经统一协议上报与广播</td></tr>
+<tr><td><strong>资源场景（Resource Scene，L2）</strong></td><td>横切的<strong>系统资源</strong>档位视图（cgroup 权重/配额、内存上限、温控、磁盘），由任务资源声明与业务事件驱动切换；模块活/休眠与传感供电<strong>不在场景内</strong>——归 L0 状态迁移差集动作（FR-TS-13/15、DD-TS-06）</td></tr>
+<tr><td><strong>长任务（Long Task）</strong></td><td>占用独占资源（本体控制权、任务焦点）、持续秒级~分钟级的任务；同一时刻全局至多一个</td></tr>
+<tr><td><strong>短动作（Short Action）</strong></td><td>毫秒~秒级、可快速完成的动作指令（姿态切换、步进移动、表情灯效），走快速通道，不进入长任务队列，但受同一门控</td></tr>
+<tr><td><strong>任务仲裁（Arbitration）</strong></td><td>对新任务请求 vs 系统现状（当前任务/系统状态/门控条件）作出裁决：ACCEPT / REJECT / PREEMPT / CONFIRM（需二次确认）/ CANCEL</td></tr>
+<tr><td><strong>控制权（Input Source / Lease）</strong></td><td>向运动控制发布速度/步态指令的资格；按「源名+优先级+租期」抢占与超时释放</td></tr>
+<tr><td><strong>功能组（Function Group，FG）</strong></td><td>受管模块的逻辑分组（如 HAL_CORE/PERCEPTION/NAVIGATION）；系统状态以功能组为单位声明活跃集，迁移时对差集执行激活/去激活</td></tr>
+<tr><td><strong>受管模块（Managed Module）</strong></td><td>接入统一模块生命周期协议（心跳+激活/去激活+降级）的软件模块</td></tr>
+<tr><td><strong>门控（Gating）</strong></td><td>请求执行前的系统级前置校验（系统状态、电量、形态、健康、障碍…）；拒绝时返回统一 NOT_READY + reason</td></tr>
+<tr><td><strong>统一响应模型</strong></td><td>全系统服务共用的两层判定：框架层返回码（调度成败）+ 业务层状态码（CommonState 语义）+ reason 枚举</td></tr>
+</table>
+<p><strong>三分治理原则（本章的概念基石）</strong>：系统状态（能不能做）／任务仲裁（做什么）／控制权（谁来做）是三个独立关注点，分别由系统状态机、任务调度框架、运动控制输入源仲裁持有，互不越权、协议协同。T1 Pro 实证了这一划分（SM/task_engine/mc 三模块分立，[EV-T1P-27][EV-T1P-29][EV-T1P-05]）。</p>
+</section>
+<section class="card" id="5-3-需求与功能点"><h2>5.3 需求与功能点</h2>
+<p>优先级：P0 首版必须 / P1 首版应当 / P2 规划。所有条目验收准则见 §5.8 映射。</p>
+<h3>5.3.1 功能需求（任务调度框架）</h3>
+<table>
+<tr><th>编号</th><th>需求（规范性表述）</th><th>优先级</th></tr>
+<tr><td>FR-TS-01</td><td>系统必须提供归一的任务请求入口：语音意图、App、遥控器、SDK、定时任务触发器（定时/事件触发）提交的任务请求使用同一请求协议（源标识、任务类型、参数、token），由任务调度框架统一受理</td><td>P0</td></tr>
+<tr><td>FR-TS-02</td><td>任务类型的行为约束（优先级、可抢占/被抢占集合、门控条件、资源需求、超时、是否需二次确认）必须以声明式规则文件表达，框架不得将任何具体任务类型写死在代码中</td><td>P0</td></tr>
+<tr><td>FR-TS-03</td><td>框架必须维护任务焦点（本体控制/移动等独占资源）唯一性：占用任务焦点的长任务同一时刻至多一个 RUNNING，无资源冲突者（上肢/表情/灯光等）按规则声明并行；新请求经两级仲裁（逐任务策略 × 任务类别矩阵）裁决为 ACCEPT / REJECT / PREEMPT / PAUSE(挂起当前) / CONFIRM</td><td>P0</td></tr>
+<tr><td>FR-TS-04</td><td>每个任务实例必须具有统一的生命周期状态机（CREATED→PENDING→RUNNING→PAUSED→…→终态 COMPLETED/FAILED/ABORTED/CANCELED），全态可查询、可订阅</td><td>P0</td></tr>
+<tr><td>FR-TS-05</td><td>异步任务必须以 task_id 追踪；受理响应与状态回报遵循统一响应模型（框架码 + 业务态 + reason），终态经状态话题广播</td><td>P0</td></tr>
+<tr><td>FR-TS-06</td><td>框架必须支持对任务的取消/暂停/恢复，并保证取消语义向下游执行器传播（执行器收到取消后必须在有限时间内到达终态并释放资源）</td><td>P0</td></tr>
+<tr><td>FR-TS-07</td><td>任务受理前必须完成门控评估（系统状态、电量、形态、健康告警、环境条件如障碍/亮度），任一不满足时拒绝并返回机器可读的 reason</td><td>P0</td></tr>
+<tr><td>FR-TS-08</td><td>运动控制权必须以「输入源 + 优先级 + 租期」方式仲裁：任何模块发布速度/步态指令前必须持有控制权；高优先级可抢占，租期到期自动释放；无权源的指令必须在运动控制侧被丢弃</td><td>P0</td></tr>
+<tr><td>FR-TS-09</td><td>短动作与实时遥控类任务（realtime 类）必须走与长任务分离的快速通道（不经排队；realtime 类仅做电量与安全门控），但受同一门控与互斥规则约束（不可打断的长任务运行期间按规则拒绝或缓存短动作）</td><td>P1</td></tr>
+<tr><td>FR-TS-10</td><td>任务启动/结束必须触发声明的资源协调：控制权申请、<strong>系统资源档位切换</strong>（cgroup 算力档位、温控），任务结束后必须全部释放/回落（传感供电/导航栈 pause 随状态迁移执行，FR-TS-13/15）</td><td>P1</td></tr>
+<tr><td>FR-TS-11</td><td>框架应当提供任务查询服务：当前任务、最近任务历史、指定任务类型的可执行性预检（dry-run 门控评估）</td><td>P1</td></tr>
+<tr><td>FR-TS-12</td><td>框架可以支持组合任务与独占注入：图编程任务以声明式节点 DAG 提交（动作/语音/表情/移动/等待/条件/循环/变量），按同一仲裁与生命周期语义执行；外部独占任务可注册占用声明（注册期间其他任务请求被屏蔽、注销后恢复）</td><td>P2</td></tr>
+</table>
+<h3>5.3.2 功能需求（状态机管理）</h3>
+<blockquote>本节需求（FR-TS-13~20）由 <strong>state_machine 模块</strong>实现（含四个子模块：SystemFSM 系统状态机 / 模块生命周期管理器 / 状态广播器 / 审计与恢复器，见 §5.5.2/§5.6.1）。</blockquote>
+<table>
+<tr><th>编号</th><th>需求（规范性表述）</th><th>优先级</th></tr>
+<tr><td>FR-TS-13</td><td>系统必须存在唯一权威的系统状态机服务：持有 L0 状态集与合法迁移白名单，提供查询与迁移请求服务，并以固定周期广播当前状态（状态 + 状态内状态）</td><td>P0</td></tr>
+<tr><td>FR-TS-14</td><td>系统状态必须对全部业务请求具有门控效力：非就绪状态（INIT/OTA/SHUTDOWN/迁移中/回滚中/降级中）下，业务请求统一返回 NOT_READY + reason；迁移期间必须拒绝新的迁移与业务请求</td><td>P0</td></tr>
+<tr><td>FR-TS-15</td><td>系统状态机必须以功能组为单位管理受管模块：每个 L0 状态声明活跃功能组集，迁移时对差集模块下发激活/去激活动作；受管模块必须按协议周期上报心跳与模块状态，超时判死并按策略降级/回退</td><td>P0</td></tr>
+<tr><td>FR-TS-16</td><td>状态语义必须全系统统一：统一响应模型（框架码/业务态/reason）、统一模块生命周期状态枚举、统一状态上报话题命名规范</td><td>P0</td></tr>
+<tr><td>FR-TS-17</td><td>平台应当提供声明式域状态机框架库（状态/迁移/守卫/事件/导出），业务域状态机必须基于该库实现或满足其等价协议；运动控制实时 FSM 豁免（仅约束其状态语义与上报协议）</td><td>P1</td></tr>
+<tr><td>FR-TS-18</td><td>全部状态机必须可观测：状态迁移以事件流导出（trace），含迁移前后态、触发源、守卫结果；提供统一调试查询（任意域当前态与迁移历史）</td><td>P1</td></tr>
+<tr><td>FR-TS-19</td><td>一切对外状态迁移请求必须经合法迁移表校验，非法请求必须拒绝并记录（审计）；自动迁移必须可追溯触发条件</td><td>P0</td></tr>
+<tr><td>FR-TS-20</td><td>平台可以提供跨层状态一致性监控：对已知强相关状态对（任务态↔控制权、系统态↔模块活跃集、任务态↔运控形态）做周期对账并告警</td><td>P2</td></tr>
+</table>
+<h3>5.3.3 非功能需求</h3>
+<table>
+<tr><th>编号</th><th>需求</th><th>验收准则</th><th>优先级</th></tr>
+<tr><td>NFR-TS-01</td><td>任务仲裁时延：从请求受理到裁决返回，P99 ≤ 50ms（不含任务执行本身）</td><td>注入式并发请求压测 1k 次，统计分布</td><td>P0</td></tr>
+<tr><td>NFR-TS-02</td><td>状态门控开销：任意服务请求前的本地门控判定 ≤ 2ms（基于订阅缓存态，不做同步远端查询）</td><td>门控路径基准测试</td><td>P0</td></tr>
+<tr><td>NFR-TS-03</td><td>系统状态机可用性：崩溃自动重启（上限可配），重启后 3s 内重建状态（从受管模块心跳与持久化快照），重启期间运动控制实时域必须独立可用</td><td>故障注入（kill 系统状态机）演练</td><td>P0</td></tr>
+<tr><td>NFR-TS-04</td><td>可测试性：域状态机框架库单测覆盖率 ≥ 85%；全部状态机支持离线事件回放重建状态序列</td><td>CI 覆盖率报告 + 回放工具</td><td>P1</td></tr>
+<tr><td>NFR-TS-05</td><td>可扩展性：新增任务类型/新增受管模块/新增 L0 状态动作，只改配置与规则文件，不改框架代码</td><td>以「新增巡逻任务」演练验证</td><td>P1</td></tr>
+<tr><td>NFR-TS-06</td><td>实时域隔离：运动控制实时 FSM 的运行不得依赖任何跨进程同步调用（状态上报为异步单向）</td><td>代码审查 + 实时域断网/断进程演练</td><td>P0</td></tr>
+</table>
+</section>
+<section class="card" id="5-4-对标实证分析-启元-T1-Pro"><h2>5.4 对标实证分析（启元 T1 Pro）</h2>
+<blockquote>分析路径（按主控文档 §1.6）：现状盘点 → 有无统一模块判定 → 公共性分析 → 提取/不提取权衡 → 结论。证据编号见 §5.16。</blockquote>
+<h3>5.4.1 任务调度：T1 Pro 的现状</h3>
+<h4>5.4.1.1 现状盘点：任务调度由四个机制分担</h4>
+<p>T1 Pro 没有「一个包揽所有调度的模块」，长任务编排/仲裁集中在 <strong>task_engine</strong>（节点 <code>/task_engine</code>，rk 板），并与四个相邻机制协同：</p>
+<table>
+<tr><th>机制</th><th>承载模块</th><th>职责</th><th>关键证据</th></tr>
+<tr><td>长任务编排与仲裁</td><td>task_engine</td><td>统一入口 <code>AmRequest</code>：token/源/任务名/场景标签 → 仲裁裁决（0 UNKNOWN / 1 REJECTED / 2 OVERRIDE 抢占 / 3 CANCELLED / 4 SECOND_CONFIRM 二次确认 / 5 SUCCESS）+ reason 枚举 0-66 共 67 个；<strong>两层仲裁</strong>（RuleManager 逐任务策略 + ActionManager 类别矩阵）；规则文件体系（<code>rule/t1/</code> 23 个 + <code>task_rules.yaml</code> + <code>action_manager.yaml</code>）</td><td>[EV-T1P-27][EV-T1P-28][EV-T1P-31][EV-T1P-37][EV-T1P-38]</td></tr>
+<tr><td>定时任务触发</td><td><strong>定时任务触发器</strong>〔T1 误名 <code>scene_engine</code>，节点 <code>/task_trigger_ros2_node</code>，模块 TaskTriggerModule〕</td><td>订阅 Agent 的 schedule_task 任务操作 → 定时器到期 → 回调 Agent TaskStatus RPC 触发执行（T1 命名「scene_engine」名不符实，本产品正名「定时任务触发器」）；开箱编排由 task_engine 内置 Orchestrator 承担</td><td>[EV-T1P-23]</td></tr>
+<tr><td>感知场景引擎</td><td>coreon_fusion（orin）</td><td>跟随/避障等<strong>感知场景</strong>以行为树（BT）tick 驱动（scene_following 100ms / scene_avoidance 50ms），对外提供 GetSceneList/GetSceneState/SceneCommand 场景服务——「场景」的第三种含义</td><td>[EV-T1P-39]</td></tr>
+<tr><td>运动控制权仲裁与动作执行</td><td>mc（<code>/mc_ros2_node</code>）</td><td><code>SetMcInputSource</code>：源名+优先级 0-100+超时（默认 1s）；全图 11 个速度发布源（App/遥控/跟随/导航/运镜/Agent…）抢方向盘，MC 侧按源丢弃无权指令。<code>SetMcAction</code>/<code>GetMcAction</code>：<strong>离散动作指令面</strong>——姿态/舞蹈/表演类动作的执行通道（SDK 直调、task_engine 经 actions_transfer 翻译下发；受理≠完成，轮询至 TRANSITION→RUNNING；动作迁移图 action_ruler 为唯一权威）</td><td>[EV-T1P-29][EV-T1P-30][EV-T1P-41][EV-T1P-13]</td></tr>
+<tr><td>资源场景调度</td><td>sys_guard</td><td>按场景改写 cgroup 权重/配额、传感供电；场景由事件+优先级驱动</td><td>[EV-T1P-20]</td></tr>
+</table>
+<p>task_engine 是全图最重的枢纽节点（发布 13 话题 / 订阅 54 路 / 服务端 31 条 func_name / 客户端 58 条；线程池 work 10 + worker 5）[EV-T1P-27]。任务入口构成：Agent 经 <code>/aima/agent/semantic_intent</code> 话题单向广播意图；<strong>App 玩法经 app_proxy 也先过 AmRequest 仲裁</strong>再进业务服务；遥控器走 realtime 旁路直发 velocity（source=rc）；SDK 用户程序直调服务；定时任务经定时任务触发器 [EV-T1P-27][EV-T1P-23][EV-T1P-37]。</p>
+<h4>5.4.1.2 规则与仲裁语义（实证要点）</h4>
+<p><strong>规则文件体系（三层）</strong> [EV-T1P-37]：</p>
+<ol><li><code>rule/t1/*.yaml</code>（23 个，每任务类型一文件）：统一字段结构 <code>task_base{enable/task_name/task_type/real_task_type/behavior_kind/priority/permission_level/allow_preempt/track_running_state/timing_cycle_ms/need_confirm}</code> + <code>allow_source</code> + <code>odom_condition</code> + <code>precondition{allow_posture/block_posture/battery_min_percent/allow_charging_state/allow_held_state/check_app_conn/check_cloud_conn/check_network/check_log_sync/posture_exemptions}</code> + <code>alarm_condition</code> + <code>motion_condition</code> + <code>arbitration_policy</code>（对全部 ~21 个其它任务逐一声明 override/reject/parallel/interrupt）。</li><li><code>task_rules.yaml</code>（10 个 App/系统侧任务清单：摇杆/体感/示教/回放/移动/跟随/画布/专座/恢复出厂）。</li><li><code>action_manager.yaml</code>：「运行中任务类别 × 新请求任务类别」矩阵仲裁（parallel/override/reject），RuleManager 之下的第二层仲裁 [EV-T1P-38]。</li></ol>
+<p><strong>优先级阶梯与任务分级</strong>（rule/t1 实测值）[EV-T1P-37]：shutdown=100 &gt; factory_reset/openbox=90 &gt; move=70 &gt; 示教录制/回放=60 &gt; 建图/定位=55 &gt; posture/follow/navigation/set_mode/rc=50 &gt; 运镜/全身动作=45 &gt; 上肢动作=40 &gt; 唤醒转向=35 &gt; 主动交互=30 &gt; 触摸=25 &gt; idle=10。任务分三级：long_task / short_task / <strong>realtime_task</strong>（rc_joystick 摇杆：「高频实时指令，仅校验电量」）。</p>
+<p><strong>门控实证</strong>：posture（优先级 50、<code>allow_held_state: false</code> 牵手拒绝、<code>posture_exemptions "4": [battery, charging]</code> 趴下豁免低电）[EV-T1P-28]；follow（电量 ≥6%、odom <code>require_trusted: true</code>、目标丢失防抖双足 1500ms/四足室内 3000ms）；navigation（电量 ≥20、「导航期间独占移动资源」、block_posture 阻尼/趴卧系列）；shutdown（allow_source 仅 SYSTEM/APP、15 种安全姿态白名单）；rc_gyro 体感（电量 ≥30、<code>blocks_direct_rpc: true</code> 运行中屏蔽其他 AmRequest）。</p>
+<p><strong>仲裁流程</strong>（二进制符号+日志串还原）[EV-T1P-38]：入口分发 → 别名归一（function_name_aliases）→ <code>RuleManager::CheckTaskCanRun</code> 门控链（precondition → alarm → motion → odom → additional check）→ 来源校验 → 速度源防争抢（allow_velocity_source）→ <code>RuleManager::ArbitrateCheck</code> 逐任务策略 → <code>ActionManager::Decide</code> 类别矩阵（含资源优先级抢占）→ WorkerManager 执行/取消。<strong>并行白名单</strong>：并非绝对单任务——upper_body 允许与移动并行、interaction 与 follow/navigation 并行、localization 可与导航共存、idle 对 Time/Text/Emotion/Light 并行；独占资源（移动/全身）仍互斥并返回 <code>REASON_TASK_RUNNING</code>（reason 15）[EV-T1P-31]。</p>
+<p><strong>独占与注入</strong>：<code>blocks_direct_rpc: true</code>（体感遥控/图编程/示教运行中屏蔽其他 AmRequest）；<code>TaskInjection</code>＝外部模块注册 task_id 形成注入门（注册后普通 AmRequest/Touch 被屏蔽），为二开独占型长任务预留 [EV-T1P-40]。</p>
+<p><strong>确认闭环</strong>：<code>need_confirm: true</code> 时仲裁返回 SECOND_CONFIRM(4)，经 <code>/aima/agent/semantic_intent</code>（type=confirmation value=yes/no）回传确认后重入 [EV-T1P-41]。</p>
+<p><strong>统一响应模型</strong>：<code>header.code</code>（框架调度成败）→ <code>CommonState.value</code>（UNKNOWN…NOT_READY…RUNNING）→ <code>reason</code>（0-30 核心 + AmRequest 扩展 0-66）+ <code>task_id</code> 异步追踪 [EV-T1P-25]。</p>
+<p><strong>任务类型体系</strong>：TaskState 枚举 0-17（0 UNKNOWN；1-17 为任务类型：跟随 1/建图 6/定位 7/环绕运镜 9/图编程 11/导航 13/开机 14/关机 15/移动 16/合影 17…）+ task_stage（STARTING/RUNNING/STOPPING）+ token（source 不得为空）[EV-T1P-17]；取消粒度 am_mode 0-4（按动作/按动画/按任务名/按资源类型/全部）[EV-T1P-41]；交互长任务状态经 <code>/aima/interaction/state</code> 广播（含形态/模式 mode 0 室内/1 户外/2 超能）[EV-T1P-32]。</p>
+<h4>5.4.1.3 公共性与缺口</h4>
+<p>公共部分已被 T1 Pro 抽出：统一入口协议（AmRequest）、声明式规则、统一响应模型、task_id 追踪——这正是可复用的「框架」。仍显分散/缺口的部分：</p>
+<ol><li><strong>入口部分归一、旁路并存</strong>：App/SDK/系统/开箱已收敛到 AmRequest/ControlTask 服务面（App 玩法经 app_proxy 也先过 AmRequest 仲裁）；但 Agent 走单向语义意图话题（+确认专用意图）、遥控器走 realtime 旁路直发 velocity——同一「任务」概念存在服务调用/话题意图/实时旁路三种形态，各自实现「入口→仲裁」转换 [EV-T1P-23][EV-T1P-27][EV-T1P-37]。</li><li><strong>任务级 McAction 转换图双份维护</strong>：task_engine <code>actions_transfer.yaml</code>（324 行）与 mc <code>action_ruler.yaml</code> 各自维护一张 McAction 有向迁移图，且已出现不一致并靠注释人肉修补（「STAND_UP(1007) 属 Q 系列…T1 四足下发会报 can not find action，正确目标是 101」）[EV-T1P-24]。</li><li><strong>控制权仲裁与任务仲裁割裂</strong>：<code>SetMcInputSource</code> 在 mc 侧，任务规则里的资源需求（跟随需抢占 follow 输入源）由 task_engine 在仲裁后另行调用，协议上无「资源预留」原子性保证；且输入源配置已出现<strong>文档漂移</strong>（SDK 文档 app_proxy=60，真机 mc_T1.yaml=90，真机还多出 app_proxy_t_mode/insta360 两源）[EV-T1P-29][EV-T1P-41]。</li><li><strong>「场景」一词四处含义</strong>：① task_engine Orchestrator 的开箱场景编排（orchestrator/*.yaml 步骤脚本）；② rk 的<strong>定时任务触发器</strong>（T1 误名 scene_engine——名为场景引擎、实为定时触发器）；③ coreon_fusion（orin）的 BT 感知场景（跟随/避障 tick 驱动 + SceneCommand 服务）；④ sys_guard 的资源场景（cgroup 档位）。四套机制各自独立、词汇冲突，联动靠隐式约定 [EV-T1P-20][EV-T1P-23][EV-T1P-39]。</li></ol>
+<h3>5.4.2 状态机管理：T1 Pro 的现状</h3>
+<h4>5.4.2.1 判定：有统一独立的系统级状态机，但其覆盖面窄；域状态机广泛分散</h4>
+<p><strong>T1 Pro 存在一个统一独立的整机状态机模块：<code>aim_sm_app</code>（节点 <code>/sm</code>，rk 板，SystemManagerModule v2.2.1）</strong>。它持有 9 个系统状态与迁移白名单，经 proto RPC 驱动受管模块，是全系统服务门控（NOT_READY 语义）的权威源 [EV-T1P-01]。</p>
+<p>但其「统一」仅到系统级生命周期门控——<strong>直接受 SM 管理的模块仅 7 个</strong>（master：hds/mc/task_engine/hal_camera/audio_manager；slave0：hal_rgbd/coreon_fusion），全机 30+ 应用中的其余模块（Agent、导航栈、感知、语音、App 代理…）只受 process_manager 的启动阶段编排与进程守护，不参与状态机激活/去激活 [EV-T1P-02][EV-T1P-26]。同时，系统内广泛存在<strong>分散的域状态机</strong>（≥7 类）：</p>
+<table>
+<tr><th>#</th><th>状态机</th><th>宿主模块</th><th>状态集（实证）</th><th>定义载体</th><th>频率/传播</th></tr>
+<tr><td>1</td><td>整机状态机</td><td>aim_sm_app（/sm）</td><td>9 态：Startup/OpenBox/Ready/Business/StandbyPowerSave/IdlePowerSave/OTA/EStop/Shutdown + SystemStatus（IN_INITIAL/READY/MOVE/ROLLBACK/RECOVERY 等）</td><td><code>qy3576_t1_v2d1_2X.yaml</code> system_modes</td><td>状态话题 <code>/aima/sm/system_state</code> 广播（8 订阅者）+ GetSystemState/MigrateSystemState 服务 [EV-T1P-01][EV-T1P-09]</td></tr>
+<tr><td>2</td><td>运控 FSM</td><td>mc（CPU3 独占）</td><td>fsm_state 6 态：STARTING/STABLE/MOVING/SAFE/SPECIAL/TEST；McAction 动作图 ~60 个动作节点 + 迁移边</td><td><code>qd1_t2d0/action_state.yaml</code>（FSM×动作允许集）、<code>action_ruler.yaml</code>（迁移图）、<code>action_setting.yaml</code>（runner 周期 2ms~50ms）</td><td>McCommonState 50Hz 发布；内部 1kHz 环 [EV-T1P-12][EV-T1P-13][EV-T1P-15]</td></tr>
+<tr><td>3</td><td>任务态</td><td>task_engine</td><td>TaskState 18 枚举（0 UNKNOWN + 17 类任务）× task_stage（STARTING/RUNNING/STOPPING）+ token；另有 AmStatus 函数级状态</td><td>aimdk_msgs TaskState + 规则文件</td><td><code>/aima/interaction/state</code> 等广播 [EV-T1P-17][EV-T1P-32]</td></tr>
+<tr><td>4</td><td>会话状态</td><td>Agent</td><td>main_state：IDLE/LISTENING/THINKING/SPEAKING + sub_state（LISTENING 生效）：DEFAULT/IDLE/VOICE_ACTIVE/INTERRUPTED</td><td>aimdk_msgs 消息定义</td><td><code>/aima/agent/interaction_state</code> [EV-T1P-16]</td></tr>
+<tr><td>5</td><td>算法任务态（族）</td><td>follow/navi/map/tts/insta360/charge… ≥12 种</td><td>FollowState 0-7、NaviState 0-8（含 LOW_POWER=7）、TtsStatus 0-7、MapBuildState…</td><td>各自 msg 枚举</td><td>各自状态话题，task_engine 订阅聚合 [EV-T1P-18]</td></tr>
+<tr><td>6</td><td>nav2 生命周期</td><td>lifecycle_manager ×3 组</td><td>标准 lifecycle（Unconfigured/Inactive/Active）</td><td>navigation/localization/t1_perception 三组 lifecycle_manager 配置</td><td>标准 lifecycle 服务；低功耗=PAUSE [EV-T1P-19]</td></tr>
+<tr><td>7</td><td>资源场景 + 健康 FSM</td><td>sys_guard</td><td>场景：bootup/normal（启用）+ 7 个已定义未启用（ai_interact/motion_active/emergency_stop/low_power/follow_mode/video_stream/ota_update）；健康监控 FSM（Normal→Suspect→…，t_fire 5s/t_cool 120s）</td><td><code>t1_soc0/scene_*.yaml</code>、<code>monitor.yaml</code></td><td><code>/sys_guard/active_scene</code> 广播 [EV-T1P-20][EV-T1P-21][EV-T1P-22]</td></tr>
+<tr><td>8</td><td>模块生命周期</td><td>SM↔各受管模块</td><td>SmState 8 态：INITIALIZING/STARTING/INACTIVE/ACTIVATING/ACTIVE/DEACTIVATING/SHUTINGDOWN</td><td><code>sm_state.proto</code></td><td>心跳通道 SmNodeStateChannel 1Hz [EV-T1P-07][EV-T1P-08]</td></tr>
+</table>
+<h4>5.4.2.2 SM 的设计要点（值得继承的部分）</h4>
+<ol><li><strong>状态 + 白名单迁移 + 状态内状态</strong>：9 态的 <code>next_mode_list</code> 白名单表达合法迁移；迁移中（IN_MOVE）/回滚（IN_ROLLBACK）/降级（IN_FALLBACK）用 SystemStatus 表达并在这些 status 下拒绝业务与迁移请求——「迁移/回滚不是状态而是状态内状态」避免了状态爆炸 [EV-T1P-01][EV-T1P-09]。</li><li><strong>功能组×状态激活矩阵 + 差集动作</strong>：每状态声明 active_FG_list；迁移时对前后状态差集下发模块激活/去激活（<code>DIFF</code> 动作）。SM 层的动作<strong>只有激活/去激活两种</strong>（<code>SmAction.Type{ACTIVATE, DEACTIVATE}</code>），业务行为不进 SM——职责边界干净 [EV-T1P-03][EV-T1P-04]。</li><li><strong>资源动作挂接状态</strong>：状态动作可携带资源语义（如 StandbyPowerSave 态 <code>resource_stream_off tof</code>：侧向 ToF 停流、关节保持上电；Ready 态按条件 <code>resource_stream_on</code>）——状态迁移直接兑现功耗策略 [EV-T1P-01]。</li><li><strong>心跳健康管理</strong>：受管模块 1Hz 上报 SmNodeState（节点名+模块状态+最近动作/降级结果）；SM 周期判活打印存活/死亡名单；模块降级（Fallback）有独立协议且「必须成功」[EV-T1P-07][EV-T1P-08]。</li><li><strong>不自动激活的安全默认</strong>：<code>Auto_transToReady: false</code>——上电自检后停在 Startup，需外部 RPC 显式激活才进 Ready（对应「一键激活」产品动作），避免上电即失控 [EV-T1P-10][EV-T1P-11]。</li><li><strong>迁移服务语义</strong>：<code>MigrateSystemState</code> 返回「已受理」而非「已成功」，结果须以 <code>GetSystemState</code>/状态话题确认——异步迁移的正确协议 [EV-T1P-35]。</li><li><strong>受限回滚</strong>：迁移失败回滚有上限（max_rollback_count=10），关机流程等待从板下电（3s/500ms 轮询）[EV-T1P-01]。</li></ol>
+<h4>5.4.2.3 分散状态机的共性机制（「公共部分」是什么）</h4>
+<p>对上表 8 类状态机做横向归纳，全部具备<strong>同一组机制要素</strong>，只是各自独立实现：</p>
+<table>
+<tr><th>机制要素</th><th>SM</th><th>mc</th><th>task_engine</th><th>算法任务态</th><th>nav2 lifecycle</th><th>sys_guard</th></tr>
+<tr><td>状态枚举定义</td><td>✔ yaml</td><td>✔ yaml</td><td>✔ msg 枚举</td><td>✔ msg 枚举</td><td>标准</td><td>✔ yaml</td></tr>
+<tr><td>合法迁移表/白名单</td><td>✔ next_mode_list</td><td>✔ action_ruler 有向图</td><td>✔ actions_transfer.yaml</td><td>✘（隐式）</td><td>标准</td><td>✘（事件驱动）</td></tr>
+<tr><td>守卫/门控条件</td><td>✔ 状态门控</td><td>✔ IMU 姿态检查/白名单</td><td>✔ 规则文件 precondition</td><td>部分</td><td>✘</td><td>✔ 健康阈值</td></tr>
+<tr><td>迁移事件广播</td><td>✔ system_state</td><td>✔ mc/common/state</td><td>✔ interaction/state</td><td>✔ 各自 state 话题</td><td>✔ transition_event</td><td>✔ active_scene</td></tr>
+<tr><td>查询服务</td><td>✔ GetSystemState</td><td>✔ GetMcAction</td><td>✔ GetTaskInfo</td><td>部分</td><td>✔ get_state</td><td>✘</td></tr>
+<tr><td>非法迁移拒绝</td><td>✔</td><td>✔ allow_all_switch_to</td><td>✔ reason 返回</td><td>✘</td><td>✔</td><td>—</td></tr>
+<tr><td>心跳/健康</td><td>✔ 1Hz</td><td>—（SM 专用线程保心跳）</td><td>—</td><td>—</td><td>✔ bond</td><td>✔ 自身即健康源</td></tr>
+</table>
+<p><strong>重复实现的实证代价</strong>（这是判断「要不要抽取」的关键证据）：</p>
+<ul><li><strong>同一张动作迁移图维护了两份</strong>：mc <code>action_ruler.yaml</code>（运控权威）与 task_engine <code>actions_transfer.yaml</code>（编排侧副本，324 行），且已出现漂移——T1 四足上 Q 系列 STAND_UP(1007) 不可用，靠 task_engine 侧注释人肉特判「正确目标即 101」[EV-T1P-24]。</li><li><strong>状态词汇不统一</strong>：「场景」（T1 将定时任务触发器误名 scene_engine / sys_guard 资源场景）、「状态」（system_state / task_state / fsm_state / interaction_state）多套命名并存，消费者（App/云）需要逐个适配 [EV-T1P-20][EV-T1P-23]。</li><li><strong>门控实现分散</strong>：NOT_READY 拦截、任务前置检查（电量/形态/牵手）、运控白名单（action_state IMU 检查、security_guard）三层各自实现，规则有重叠但格式不同 [EV-T1P-24][EV-T1P-28]。</li></ul>
+<h4>5.4.2.4 提取「统一独立状态机管理模块」的权衡</h4>
+<p><strong>方案对比</strong>：</p>
+<table>
+<tr><th>方案</th><th>内容</th><th>优点</th><th>缺点</th><th>判定</th></tr>
+<tr><td>A. 全集中</td><td>一个模块管理全系统所有状态机（含运控 FSM、任务态、会话态…），所有迁移都经过它</td><td>单一权威、全局视图最强</td><td>① 单点故障放大；② 实时域不可行——mc FSM 是 1kHz/隔离核/RR 调度的实时图执行机，依赖跨进程服务会破坏确定性（T1 Pro 专门为 SM 心跳设 RT 线程，反证此约束 [EV-T1P-33]）；③ 状态语义异质（毫秒级动作图 vs 分钟级业务态），统一抽象必然漏水；④ 每个域迁移都要 RPC，时延与耦合双输</td><td>否决</td></tr>
+<tr><td>B. 仅协议统一（T1 Pro 现状）</td><td>各模块自建状态机，仅统一响应语义（CommonState）与关键状态话题</td><td>实现自由、无中心依赖</td><td>① 8 类状态机 8 套实现，测试/工具不可复用；② 迁移图双份维护已实际漂移 [EV-T1P-24]；③ 可观测性靠拼凑，无统一迁移审计</td><td>不足以支撑本产品</td></tr>
+<tr><td>C. 框架库 + 系统状态服务 + 统一协议（推荐）</td><td>三件套：<strong>fsm-core 库</strong>（声明式状态机框架，业务域复用实现）；<strong>系统状态机服务</strong>（独立进程，L0 权威 + 模块生命周期 + 门控）；<strong>统一状态协议</strong>（状态码/上报话题/迁移事件流/审计规范）</td><td>见下</td><td>需要投入框架开发与治理规范；抽象需覆盖分层/并行等形态</td><td><strong>采用</strong>（DD-TS-03）</td></tr>
+</table>
+<p><strong>方案 C 的价值量化</strong>（相对 B / T1 Pro 现状的增量收益）：</p>
+<ol><li><strong>消除双份迁移图</strong>：动作迁移图唯一权威化（运控域持有，编排侧订阅生成/引用），彻底消除 actions_transfer.yaml 类漂移——T1 Pro 已为此付出对账成本 [EV-T1P-24]。</li><li><strong>可测试性</strong>：fsm-core 一次实现全遍历测试/回放工具，全部业务域状态机免费获得；T1 Pro 各域只能各自写测试。</li><li><strong>可观测性</strong>：统一迁移事件流（谁、何时、何态→何态、守卫结果、触发源），故障排查从「翻 8 种日志」变为「一条 trace」；对标 T1 Pro 已有 <code>/robot/trace/events</code> 埋点通道但未覆盖状态机全貌 [EV-T1P-34]。</li><li><strong>接入一致性</strong>：新模块按协议模板接入（心跳+状态+迁移声明），评测/测试/云监控无需为每个模块定制。</li><li><strong>门控下沉</strong>：系统态门控在框架层统一前置（NOT_READY + reason），业务模块不再各自实现拦截——T1 Pro 的 NOT_READY 拦截实现分散在各业务二进制内 [EV-T1P-25]。</li></ol>
+<p><strong>方案 C 的边界（何时不应统一）</strong>：</p>
+<ul><li>运动控制实时 FSM：豁免 fsm-core 强制（允许配置图表驱动实现），但<strong>必须</strong>满足状态语义与上报协议（状态枚举上报、迁移事件导出）——兼顾实时确定性与全局可观测（NFR-TS-06）。</li><li>高频算法内部状态（如跟踪器内部帧级状态）：不纳入状态管理，只要求任务级状态上报。</li></ul>
+<h4>5.4.2.5 状态覆盖面缺口的修复（T1 Pro 的第二个教训）</h4>
+<p>T1 Pro 的 SM 只管 7 个模块，感知/导航/语音等大部分模块游离于状态机之外，导致：省电只做到「ToF 停流」（StandbyPowerSave 与 IdlePowerSave 的动作列表相同 [EV-T1P-01]），导航栈的休眠靠 nav2 自己的 <code>start_in_low_power</code> 参数 [EV-T1P-19]，模块启停与状态迁移两张皮（process_manager 阶段编排无条件拉起全部 30+ 应用 [EV-T1P-26]）。</p>
+<p><strong>本产品的修复</strong>：受管模块协议全量接入（可裁剪模块按功能组声明），系统状态→模块集矩阵完整填充；进程守护（OM 域）执行启停但听命于系统状态机的激活指令（对标 T1 Pro SM→EmAppService→process_manager 的调用链 [EV-T1P-10]，但覆盖全部可选模块而非 7 个）。</p>
+</section>
+<section class="card" id="5-5-设计方案"><h2>5.5 设计方案</h2>
+<h3>5.5.1 设计目标与原则</h3>
+<ol><li><strong>三分治理</strong>（§5.2）：系统状态（能不能做）/任务仲裁（做什么）/控制权（谁来做）三个权威，协议协同、互不越权。</li><li><strong>声明优先</strong>：任务规则、状态迁移表、模块矩阵、场景资源全部声明式（YAML/JSON），框架代码与业务内容分离。</li><li><strong>异步与单向</strong>：状态传播一律异步广播；迁移服务返回「受理」语义；实时域零同步依赖。</li><li><strong>统一语义</strong>：一套响应模型、一套状态码、一套命名规范贯穿全系统。</li><li><strong>失败显式</strong>：拒绝必有 reason；迁移必有事件流；降级必有协议。</li></ol>
+<h3>5.5.2 逻辑视图</h3>
+<p>逻辑视图以<strong>深色实框</strong>圈出本特性域主体（<strong>task_engine + state_machine</strong> 两个核心进程模块——任务调度框架与两层状态机治理的框架本体）；一层划分与总体架构（architecture-design.md §3.6.1）对齐：大脑 Agent 子系统（上左）、小脑子系统（上右）、软件平台子系统（底层承载），两 TS 模块均为软件平台子系统内进程。<strong>框外实体画法约定</strong>：① <strong>sys_guard</strong>（系统资源守护）属本域交付（P1；16 模块清单中与 task_engine/state_machine 同组，architecture-design.md §3.2.1），但它是系统资源侧守护进程而非任务/状态框架本体，与核心两模块仅经 IF-TS-10 单接口协同——<strong>不画入逻辑视图</strong>，职责见下表与 §5.6.3；② OM 进程守护、OS 基础服务、本体 APP 为外域实体（分别经 IF-TS-09/IF-TS-01 协同）；③ 定时任务触发器（平台·独立进程）同为框外——它是任务入口之一（走 IF-TS-01，T1 实证独立 em 应用），非本域关键模块，分析见 §5.4.1.1。<strong>fsm-core 是库（开发期构件）非运行期组件，不作为独立框画入依赖图</strong>——以宿主标注呈现（task_engine 任务运行时、state_machine 的 SystemFSM 均基于其实现，见 §5.6.4）。大脑/小脑实体为入口与执行协同方。箭头＝依赖方向（运行期调用/数据依赖）。其中<strong>定时任务触发器</strong>为正名——T1 Pro 中名为 scene_engine〔节点 /task_trigger_ros2_node〕，该命名有迷惑性（名为场景引擎、实为定时触发器，见 §5.4.1.1/EV-T1P-23），本产品一律使用正名。</p>
+<figure class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1000" height="720" viewBox="0 0 1000 720" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <style>
+    .lbl { font-size: 10px; fill: #334155; stroke: #ffffff; stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
+    .sub { font-size: 11px; fill: #475569; }
+  </style>
+
+  <!-- 标题 -->
+  <text x="500" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#0f172a">图 5-1 TS 特性域逻辑视图</text>
+
+  <!-- ===== 大脑 Agent 子系统（上左） ===== -->
+  <rect x="40" y="46" width="420" height="108" rx="10" fill="#eff6ff" stroke="#3b82f6" stroke-width="1.6"/>
+  <text x="56" y="66" font-size="12" font-weight="bold" fill="#1e40af">大脑 Agent 子系统</text>
+  <rect x="56" y="76" width="180" height="62" rx="6" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+  <text x="146" y="102" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">大脑 Agent</text>
+  <text x="146" y="122" text-anchor="middle" font-size="10" fill="#475569">意图/语音入口</text>
+  <!-- 副注：其余入口实体见正文 -->
+  <text x="320" y="105" font-size="9" fill="#94a3b8">（定时任务触发器、本体 APP</text>
+  <text x="320" y="118" font-size="9" fill="#94a3b8">等入口实体见 §5.5.2 表）</text>
+
+  <!-- ===== 小脑子系统（上右） ===== -->
+  <rect x="540" y="46" width="420" height="108" rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.6"/>
+  <text x="556" y="66" font-size="12" font-weight="bold" fill="#166534">小脑子系统</text>
+  <rect x="556" y="76" width="180" height="62" rx="6" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+  <text x="646" y="102" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">小脑技能执行器</text>
+  <text x="646" y="122" text-anchor="middle" font-size="10" fill="#475569">跟随/导航/运控</text>
+  <rect x="776" y="76" width="160" height="62" rx="6" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+  <text x="856" y="102" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">mc 输入源仲裁</text>
+  <text x="856" y="122" text-anchor="middle" font-size="10" fill="#475569">优先级/租期看门狗</text>
+
+  <!-- ===== 软件平台子系统（底层） ===== -->
+  <rect x="40" y="180" width="920" height="400" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.6"/>
+  <text x="56" y="202" font-size="12" font-weight="bold" fill="#92400e">软件平台子系统</text>
+
+  <!-- TS 特性域主体实框 -->
+  <rect x="120" y="220" width="760" height="340" rx="10" fill="none" stroke="#0f172a" stroke-width="2.2"/>
+  <text x="500" y="212" text-anchor="middle" font-size="12" font-weight="bold" fill="#0f172a">TS 特性域主体：task 调度框架 + 状态机管理</text>
+
+  <!-- task_engine（上层·含流水线+底座） -->
+  <rect x="170" y="240" width="660" height="130" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="500" y="262" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">task_engine（任务调度框架）</text>
+  <!-- 上层流水线 -->
+  <rect x="186" y="274" width="140" height="30" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="256" y="293" text-anchor="middle" font-size="11" fill="#1d4ed8">入口网关</text>
+  <rect x="340" y="274" width="140" height="30" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="410" y="293" text-anchor="middle" font-size="11" fill="#1d4ed8">规则引擎</text>
+  <rect x="494" y="274" width="140" height="30" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="564" y="293" text-anchor="middle" font-size="11" fill="#1d4ed8">两级仲裁器</text>
+  <!-- 右侧纵框：状态聚合 -->
+  <rect x="680" y="274" width="128" height="82" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="744" y="296" text-anchor="middle" font-size="12" font-weight="bold" fill="#1d4ed8">状态聚合</text>
+  <text x="744" y="314" text-anchor="middle" font-size="9" fill="#64748b">域状态 → TaskState 广播</text>
+    <!-- 流水线箭头 -->
+  <line x1="326" y1="289" x2="340" y2="289" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="480" y1="289" x2="494" y2="289" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="634" y1="289" x2="680" y2="289" stroke="#60a5fa" stroke-width="1.2" marker-end="url(#arr)"/>
+  <!-- 运行时→聚合 小箭头 -->
+  <line x1="634" y1="345" x2="680" y2="345" stroke="#3b82f6" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="657" y="340" text-anchor="middle" font-size="10" fill="#64748b">任务态</text>
+
+  <!-- 底座 -->
+  <rect x="186" y="316" width="448" height="38" rx="4" fill="#eff6ff" stroke="#3b82f6"/>
+  <text x="410" y="332" text-anchor="middle" font-size="10" fill="#1d4ed8">任务运行时（底座）</text>
+  <text x="410" y="346" text-anchor="middle" font-size="9" fill="#64748b">TaskState 宿主 · fsm-core 实现 · 对标 T1 WorkerManager</text>
+
+  <!-- state_machine（下层） -->
+  <rect x="170" y="400" width="660" height="130" rx="8" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="500" y="424" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">state_machine（状态机管理）</text>
+  <!-- 四子模块 -->
+  <rect x="186" y="440" width="140" height="60" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="256" y="464" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d4ed8">SystemFSM</text>
+  <text x="256" y="480" text-anchor="middle" font-size="9" fill="#64748b">状态集·白名单·守卫</text>
+  <rect x="340" y="440" width="140" height="60" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="410" y="464" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d4ed8">模块生命周期管理器</text>
+  <text x="410" y="480" text-anchor="middle" font-size="9" fill="#64748b">激活矩阵·心跳·降级</text>
+  <rect x="494" y="440" width="140" height="60" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="564" y="464" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d4ed8">状态广播器</text>
+  <text x="564" y="480" text-anchor="middle" font-size="9" fill="#64748b">system/state + NOT_READY</text>
+  <rect x="648" y="440" width="140" height="60" rx="4" fill="#ffffff" stroke="#60a5fa"/>
+  <text x="718" y="464" text-anchor="middle" font-size="11" font-weight="bold" fill="#1d4ed8">审计与恢复器</text>
+  <text x="718" y="480" text-anchor="middle" font-size="9" fill="#64748b">事件流·快照重建</text>
+
+  <!-- ===== 依赖边 ===== -->
+  <g stroke="#475569" stroke-width="1.4" fill="none" marker-end="url(#arr)">
+    <!-- 大脑 Agent → task_engine -->
+    <path d="M 146 138 L 146 180 L 256 180 L 256 240"/>
+    <text class="lbl" x="148" y="174">/robot/task/request</text>
+    <!-- task_engine → 小脑执行器（任务与动作指令下发合并为一支） -->
+    <path d="M 564 240 L 564 180 L 646 180 L 646 138"/>
+    <text class="lbl" x="600" y="174">获准任务/取消 · set_action</text>
+    <!-- 技能执行器 → mc 仲裁 -->
+    <path d="M 736 107 L 776 107"/>
+    <text class="lbl" x="756" y="98" text-anchor="middle">输入源/velocity</text>
+    <!-- task_engine → state_machine -->
+    <path d="M 410 370 L 410 400"/>
+    <text class="lbl" x="418" y="388">门控/状态查询</text>
+
+  </g>
+
+  <!-- ===== 图例 ===== -->
+  <g font-size="11" fill="#475569">
+    <rect x="40" y="600" width="920" height="100" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+    <line x1="60" y1="620" x2="100" y2="620" stroke="#475569" stroke-width="1.4" marker-end="url(#arr)"/>
+    <text x="110" y="624">实线＝运行期调用/数据依赖（标注 IF 编号）</text>
+    <text x="60" y="648" font-size="10" fill="#94a3b8">fsm-core（库）＝开发期构件，链接于 task_engine 与 state_machine 进程内，非运行期组件不画入图；OM/OS/定时任务触发器等外域实体与 sys_guard（域内 P1·框外交付）见 §5.5.2 表与 §5.10</text>
+    <rect x="340" y="660" width="14" height="14" fill="none" stroke="#0f172a" stroke-width="2"/>
+    <text x="360" y="671">深色实框＝TS 特性域主体（交付边界）</text>
+    <rect x="560" y="660" width="14" height="14" fill="#eff6ff" stroke="#3b82f6"/>
+    <text x="580" y="671">大脑</text>
+    <rect x="620" y="660" width="14" height="14" fill="#f0fdf4" stroke="#22c55e"/>
+    <text x="640" y="671">小脑</text>
+    <rect x="680" y="660" width="14" height="14" fill="#fffbeb" stroke="#f59e0b"/>
+    <text x="700" y="671">软件平台</text>
+  </g>
+</svg>
+<figcaption>图 5-1 TS 特性域逻辑视图</figcaption></figure>
+<p>关键模块与依赖说明（<strong>粒度＝图 5-1 中每个框</strong>，按三大子系统组织；图中实线仅画跨子系统依赖 4 条——task_engine→小脑的<strong>任务与动作指令下发合并为一支箭头</strong>（IF-TS-14 获准任务/取消 ＋ IF-TS-15 set_action，运行期目标分别为技能执行器与 mc 动作面，见 §5.6.2「mc 双指令面」），框内流水线流向与框外协同在本表逐框登记，边↔IF 对应见 §5.7 互校注记；各框职责功能见下方子模块详表）：</p>
+<table>
+<tr><th>子系统</th><th>图中框</th><th>归属</th><th>依赖（边）与关键接口</th></tr>
+<tr><td>大脑 Agent 子系统</td><td><strong>大脑 Agent</strong>〔意图/语音入口〕</td><td>外域（大脑）</td><td>→ task_engine·入口网关：/robot/task/request 归一受理（IF-TS-01）</td></tr>
+<tr><td>小脑子系统</td><td><strong>小脑技能执行器</strong>〔跟随/导航/运控〕</td><td>外域（小脑）</td><td>← task_engine·任务运行时：获准任务/取消（IF-TS-14 域执行器契约）；→ mc 输入源仲裁：申请输入源/每帧 velocity 续租</td></tr>
+<tr><td>小脑子系统</td><td><strong>mc 输入源仲裁</strong>〔优先级/租期看门狗〕</td><td>外域（小脑·运控）</td><td>← 技能执行器：输入源/velocity（IF-TS-11；协议本域定义、MC 域实现，DD-TS-05/09）；← task_engine·任务运行时：set_action 离散动作指令（IF-TS-15——动作执行面与输入源仲裁同属 mc 进程，图中不单独画边、并入 task_engine→执行器下发箭头标注）；无权源指令在 MC 侧丢弃</td></tr>
+<tr><td>软件平台·task_engine（TS 主体框上半）</td><td><strong>入口网关</strong></td><td><strong>TS 域</strong></td><td>← 大脑 Agent／本体 APP／定时任务触发器等五入口（IF-TS-01 归一受理；token/幂等/来源白名单）；→ 规则引擎（进程内流水线）</td></tr>
+<tr><td>软件平台·task_engine（TS 主体框上半）</td><td><strong>规则引擎</strong></td><td><strong>TS 域</strong></td><td>← 入口网关；↔ state_machine·状态广播器：系统态/健康订阅缓存（IF-TS-05/07）；→ 两级仲裁器</td></tr>
+<tr><td>软件平台·task_engine（TS 主体框上半）</td><td><strong>两级仲裁器</strong></td><td><strong>TS 域</strong></td><td>← 规则引擎（门控通过后提请）；→ 任务运行时（裁决落入实例）；资源协调外呼：sys_guard 档位切换（IF-TS-10）、控制权申请（IF-TS-11）</td></tr>
+<tr><td>软件平台·task_engine（TS 主体框上半）</td><td><strong>状态聚合</strong>〔右侧纵框〕</td><td><strong>TS 域</strong></td><td>← 任务运行时（任务态）＋各域执行器域状态上报；→ 全系统：统一 TaskState 广播（IF-TS-03）；常驻订阅</td></tr>
+<tr><td>软件平台·task_engine（TS 主体框上半）</td><td><strong>任务运行时</strong>〔底部底座〕</td><td><strong>TS 域</strong></td><td>← 两级仲裁器；→ 域执行器：获准任务/取消（IF-TS-14，连续技能任务）；→ mc 动作执行面：动作型任务/短动作 set_action（IF-TS-15——单一动作出口，取消传播与审计单点）；任务态 → 状态聚合；TaskState 宿主（fsm-core 实现，图例注记）；→ state_machine·模块生命周期管理器：任务资源声明→按需激活</td></tr>
+<tr><td>软件平台·state_machine（TS 主体框下半）</td><td><strong>SystemFSM</strong></td><td><strong>TS 域</strong></td><td>9 态+迁移白名单+IN_MOVE/回滚保护（§5.6.1）；→ 模块生命周期管理器：差集动作</td></tr>
+<tr><td>软件平台·state_machine（TS 主体框下半）</td><td><strong>模块生命周期管理器</strong></td><td><strong>TS 域</strong></td><td>← SystemFSM 差集动作（功能组激活矩阵＋传感供电/导航栈 pause）；→ OM 进程守护：启停指令（IF-TS-09）；← task_engine·任务运行时：按需激活声明</td></tr>
+<tr><td>软件平台·state_machine（TS 主体框下半）</td><td><strong>状态广播器</strong></td><td><strong>TS 域</strong></td><td>← SystemFSM；→ 全系统：system/state 周期+事件广播、NOT_READY 门控语义源（IF-TS-05）；→ task_engine·规则引擎（门控缓存源）</td></tr>
+<tr><td>软件平台·state_machine（TS 主体框下半）</td><td><strong>审计与恢复器</strong></td><td><strong>TS 域</strong></td><td>← SystemFSM 迁移事件：trace 事件流（IF-TS-12）＋jsonl 审计（含被拒非法请求）；崩溃后心跳+快照重建（NFR-TS-03）</td></tr>
+<tr><td>软件平台（框外）</td><td><strong>sys_guard</strong></td><td>TS 域（框外·P1）</td><td>← task_engine·两级仲裁器：资源档位切换（IF-TS-10）；→ OS 基础服务：cgroup/温控落盘（经 systemd）；传感供电/模块启停不在本模块（归模块生命周期管理器差集动作）；不画入图（见开头段画法约定）</td></tr>
+<tr><td>软件平台（框外）</td><td><strong>定时任务触发器／本体 APP</strong></td><td>外域（平台）</td><td>→ task_engine·入口网关：/robot/task/request 归一入网（IF-TS-01）</td></tr>
+<tr><td>软件平台（框外）</td><td><strong>OM 进程守护</strong></td><td>外域（OM 域）</td><td>← state_machine·模块生命周期管理器：激活/去激活动作（IF-TS-09）；崩溃检测与重启策略回报</td></tr>
+<tr><td>软件平台（框外）</td><td><strong>OS 基础服务</strong></td><td>外域（平台）</td><td>全系统底座：ROS 2·零拷贝 IPC·进程编排·时钟同步（依赖清单见 §5.10）</td></tr>
+</table>
+<p><strong>「两层状态机」分工</strong>（任务态与系统态分属两个模块，与 T1 同构）：</p>
+<table>
+<tr><th>层</th><th>状态机</th><th>管理对象</th><th>宿主模块</th><th>T1 对标</th></tr>
+<tr><td>任务态（业务层）</td><td>TaskState（CREATED→PENDING→RUNNING→PAUSED→终态 COMPLETED/FAILED/ABORTED/CANCELED）</td><td><strong>任务实例</strong>——create/running/destroy 级生命周期，随仲裁裁决与取消传播迁移，高频且业务耦合</td><td><strong>task_engine·任务运行时</strong>（进程内零 RPC；状态聚合为其对外广播口 IF-TS-03）</td><td>task_engine 内嵌 <strong>WorkerManager</strong>（GenerateTask/ExecTaskDetailed/CancelActiveFunctionTasks，EV-T1P-38）</td></tr>
+<tr><td>系统态（治理层）</td><td>SystemFSM（9 态+白名单）＋SmState（模块 8 态）</td><td><strong>整机</strong>生命周期与<strong>受管模块进程</strong>——低频、全局门控</td><td><strong>state_machine</strong>（SystemFSM/模块生命周期管理器/状态广播器/审计与恢复器四子模块）</td><td>aim_sm_app（system_modes 联动 SmNodeService，EV-T1P-01/03/08）</td></tr>
+</table>
+<p>分工理由：① 任务态迁移是 task_engine 自身仲裁决策的结果，进程内闭环零开销；② state_machine 保持极简高可用（CPU ≤2%，NFR-TS-03 的 3s 重建），不因任务高频迁移劣化；③ 两层状态机共享 <strong>fsm-core</strong> 同一实现底座——语义统一靠库而非同宿主。<strong>勿把任务态塞进 state_machine</strong>（每次 CREATED→RUNNING 都要跨进程调用，可用性代价不值；T1 亦如此分工——其 SM 从不管理任务状态）。</p>
+<p>T1 Pro 两进程内的分层状态机（树状）——本产品与之同构（模块名右注）：</p>
+<pre class="code text"><code>T1 task_engine 进程（rk 板）                    ← 本产品 task_engine
+├── RuleManager（任务级仲裁）                    ← 横跨三职责，见下方注
+│   ├── 入口杂务：alias 别名归一/来源校验         ← 入口网关（受理层）
+│   ├── CheckTaskCanRun 门控链（precondition→    ← 规则引擎（声明式门控）
+│   │   alarm→motion→odom）
+│       └── ArbitrateCheck（逐任务 override/     ← 两级仲裁器·第一级
+│           reject/parallel/interrupt）            （运行态冲突裁决）
+├── ActionManager（类别矩阵仲裁）                ← 两级仲裁器·第二级
+│   └── Decide（running_category × incoming_category）
+├── WorkerManager（任务实例生命周期）★任务态     ← 任务运行时（底座）
+│                                                    （状态聚合＝运行时对外广播口）
+│   ├── GenerateTask / ExecTaskDetailed（创建→执行）
+│   ├── CancelActiveFunctionTasks / GracefulExitWorker（取消/收尾）
+│   └── 每任务实例一个 TaskState FSM
+│       └── task_stage（STARTING→RUNNING→STOPING，TaskState.msg）
+├── AmRequestServicePlugin（入口/别名归一）      ← 入口网关
+└── SemanticIntentPlugin（意图订阅）             ← 入口网关（语音入口）</code></pre>
+<pre class="code text"><code>T1 aim_sm_app 进程（rk 板，/sm）                ← 本产品 state_machine
+├── SystemManagerModule（整机状态机）★系统态     ← SystemFSM 子模块
+│   ├── system_modes 9 态（Startup/OpenBox/Ready/Business/…，白名单迁移）
+│   └── SystemStatus（IN_INITIAL/IN_READY/IN_MOVE/IN_ROLLBACK/IN_RECOVERY）
+├── 模块管理（心跳与激活）★模块态                ← 模块生命周期管理器子模块
+│   ├── SmNodeStateChannel 订阅（1Hz 心跳收集）
+│   │   └── SmState 8 态（INITIALIZING→ACTIVE→…）
+│   ├── Heartbeat survival/dead 判活
+│   └── EmAppService StartApps/StopApps（经 EM HTTP 50081 拉起模块）
+├── SmNodeService ExecuteAction/Fallback         ←（IF-TS-09 对标）
+│   └── 差集激活：前后状态 active_FG_list 的 ACTIVATE/DEACTIVATE
+└── SmSystemStateChannel（/aima/sm/system_state 周期广播）← 状态广播器子模块</code></pre>
+<p>（★ 标注三层状态语义：任务态只在 task_engine；aim_sm_app 只含系统态与模块态、<strong>从不管理任务状态</strong>——树中无任务态节点即为明证。）</p>
+<blockquote><strong>入口网关 vs 仲裁第一级的切分线判据</strong>：T1 的 RuleManager 横跨「入口杂务+门控+仲裁」三职责，本产品拆为三段——判据是<strong>「是否依赖运行态」</strong>：入口网关只看请求自身（token 非空/类型合法/别名归一/来源白名单/幂等，T1 实证＝AmRequestServicePlugin 的 OnService→am_mode 分发），<strong>不依赖</strong>当前运行中任务；仲裁第一级必须<strong>比对运行态</strong>（T1 实证＝ArbitrateCheck 签名含 running_task_type）。T1 的 precondition 门控混在 RuleManager 内，本产品独立为规则引擎——三段划分比 T1 两段更干净，但需记住此映射差异：<strong>验票员（网关）不看台上演到哪一场，调度员（仲裁）必须看</strong>。</blockquote>
+<p>注：<strong>fsm-core（库）</strong>为 TS 域第 4 个关键交付物（40~60 K LoC，§5.11.3/§5.12 阶段三）——开发期构件，编译链接于 task_engine（任务状态机）、state_machine（SystemFSM）及各域状态机进程内，<strong>无独立进程/接口/资源，不作为运行期组件出现在逻辑视图依赖图中</strong>。</p>
+<p><strong>关键模块子模块功能详表</strong>（图 5-1 两视图模块 task_engine/state_machine ＋框外协同模块 sys_guard/OM 内部展开）：</p>
+<table>
+<tr><th>模块</th><th>子模块</th><th>功能</th></tr>
+<tr><td><strong>task_engine</strong></td><td>入口网关</td><td>五入口（语音/App/遥控/SDK/定时）TaskRequest 归一受理；token 非空校验+幂等；来源白名单；二次确认意图回传闭环（FR-TS-01）。<strong>切分线：不依赖运行态</strong>——只验证请求自身合法性（对标 T1 AmRequestServicePlugin 分发/alias 归一层），运行中任务冲突一律归两级仲裁器第一级裁决</td></tr>
+<tr><td></td><td>规则引擎</td><td>声明式 YAML 规则加载与校验；≥10 维门控评估（电量/形态/系统态/健康/odom/网络/牵手/障碍/充电/来源）；dry-run 预检（FR-TS-02/07/11）</td></tr>
+<tr><td></td><td>两级仲裁器</td><td>第一级逐任务策略（override/reject/parallel/interrupt）+第二级类别矩阵兜底；任务焦点唯一+并行白名单；PREEMPT/CONFIRM 裁决（FR-TS-03）。<strong>切分线：依赖运行态</strong>——必须比对当前 RUNNING 任务与策略表（对标 T1 RuleManager::ArbitrateCheck，签名含 running_task_type）</td></tr>
+<tr><td></td><td>任务运行时（底座）</td><td>任务状态机宿主：TaskState 全生命周期（CREATED→PENDING→RUNNING→PAUSED→终态）；task_id 分配；取消限时传播；承接仲裁裁决并驱动执行器（连续技能经 IF-TS-14；动作型任务/短动作经 set_action 直驱 mc，IF-TS-15）；对标 T1 WorkerManager</td></tr>
+<tr><td></td><td>状态聚合</td><td>收集任务运行时任务态＋各域执行器状态上报（mc/common/state、follow/state 等域状态），翻译为统一 TaskState 对外广播（IF-TS-03）；常驻（无任务时亦订阅域状态）</td></tr>
+<tr><td><strong>state_machine</strong></td><td>SystemFSM</td><td>整机 L0 状态集（9 态）+迁移白名单+IN_MOVE/IN_ROLLBACK/IN_FALLBACK 保护+自动迁移守卫+状态迁移差集动作（传感供电掩码/导航栈 pause——对标 resource_stream_off tof，FR-TS-13/14/19）</td></tr>
+<tr><td></td><td>模块生命周期管理器</td><td>功能组×状态激活矩阵与差集执行（含传感供电掩码/导航栈 pause 资源语义动作——对标 SmAction+resource_stream）；1Hz 心跳判死（3 拍可配）；FALLBACK 降级（FR-TS-15，IF-TS-08/09）</td></tr>
+<tr><td></td><td>状态广播器</td><td><code>/robot/system/state</code> 周期+事件广播（state/status/活跃功能组）；NOT_READY 门控语义源（IF-TS-05，FR-TS-14/16）</td></tr>
+<tr><td></td><td>审计与恢复器</td><td>迁移事件流导出（IF-TS-12 含被拒非法请求）；jsonl 审计日志；崩溃后心跳+快照重建（NFR-TS-03）</td></tr>
+<tr><td><strong>sys_guard</strong>（框外·P1）</td><td>资源场景 FSM</td><td>系统资源场景状态机：场景库（performance/normal/powersave/thermalthrottle…）+优先级（0-7）+事件触发+fallback 回落</td></tr>
+<tr><td></td><td>资源执行器</td><td>场景指令落盘：cgroup v2 权重/配额/内存上限下发（经 systemd dbus）、温控降频、磁盘清理；一致性守卫（FR-TS-10）——不含传感供电/模块启停</td></tr>
+<tr><td><strong>OM 进程守护</strong>（外域）</td><td>启停执行器</td><td>执行 state_machine 的模块激活/去激活指令（IF-TS-09），分组启停（对标 EM StartApps/StopApps）</td></tr>
+<tr><td></td><td>重启策略器</td><td>崩溃检测与自动重启（上限可配）；超阈值上报 state_machine 进入降级评估（对标 sm restart max 5）</td></tr>
+</table>
+<p>依赖要点：① task_engine 不直接操作硬件与 cgroup（治理动作经 state_machine/sys_guard/OM 分发）；② fsm-core 是库不是进程（图中以宿主标注呈现）；③ 实时域（mc）不被本域同步依赖（NFR-TS-06，状态上报单向异步）；④ 大脑/小脑实体为协议协同方，非本域管理对象；⑤ <strong>三大子系统堆叠</strong>：大脑（上左）/小脑（上右）运行于软件平台（底层承载）之上——承载关系图中未画线。</p>
+<h3>5.5.3 组件交互与职责矩阵</h3>
+<div class="diagram"><div class="mermaid">flowchart LR
+    subgraph Entries["任务入口（归一协议 TaskRequest；定时任务触发器属软件平台）"]
+        V["语音意图"]
+        A["App"]
+        R["遥控器"]
+        S["SDK 用户程序"]
+        O["定时任务触发器&lt;br/&gt;（定时/事件触发）"]
+    end
+    subgraph TS["task_engine（布局同逻辑视图：上层流水线+右侧聚合+底部运行时底座）"]
+        GW["入口网关&lt;br/&gt;意图→TaskRequest 归一"]
+        RULE["规则引擎&lt;br/&gt;声明式门控评估"]
+        ARB["两级仲裁器&lt;br/&gt;单长任务+抢占矩阵+二次确认"]
+        AGG["状态聚合&lt;br/&gt;域状态→TaskState 广播"]
+        RT["任务运行时（底座）&lt;br/&gt;TaskState FSM/token/task_id"]
+    end
+    subgraph SM["state_machine（四子模块，布局同逻辑视图）"]
+        SFSM["SystemFSM&lt;br/&gt;L0 状态+白名单+IN_MOVE 保护"]
+        SUP["模块管理器&lt;br/&gt;功能组×状态矩阵/心跳/判死/降级"]
+        BRD["状态广播器&lt;br/&gt;/system/state + NOT_READY 语义"]
+        AUD2["审计与恢复器&lt;br/&gt;迁移事件流/快照重建"]
+    end
+    subgraph SCENE["sys_guard 系统资源守护（框外·P1，不画入图 5-1）"]
+        SCFSM["SceneFSM&lt;br/&gt;场景+优先级+事件"]
+        RAP["资源执行器&lt;br/&gt;cgroup/温控/磁盘"]
+    end
+    MC["运动控制（mc）&lt;br/&gt;实时 FSM + 输入源仲裁 + 动作执行"]
+    DOM["域执行器（跟随/导航/建图/…）&lt;br/&gt;基于 fsm-core 的域状态机"]
+    FSMCORE(("fsm-core&lt;br/&gt;声明式状态机框架库"))
+
+    Entries --&gt; GW --&gt; RULE --&gt; ARB
+    ARB -- "裁决落入实例（底座承接）" --&gt; RT
+    RT -- "获准任务下发/取消（IF-TS-14）" --&gt; DOM
+    RT -- "任务态" --&gt; AGG
+    RULE -- "系统态/健康门控查询（订阅缓存）" --&gt; BRD
+    ARB -- "资源预留：控制权申请" --&gt; MC
+    RT -- "动作型任务/短动作：set_action（IF-TS-15，单一目标动作）" --&gt; MC
+    ARB -- "资源档位切换（IF-TS-10）" --&gt; SCFSM
+    RT -- "任务资源声明→按需激活功能组（经 OM 执行）" --&gt; SUP
+    SFSM -- "差集动作（激活矩阵＋传感供电/导航栈 pause）" --&gt; SUP --&gt; BRD
+    DOM -.-&gt;|"fsm-core 复用"| FSMCORE
+    MC -- "mc/common/state 等价状态上报" --&gt; AGG
+    DOM -- "域状态上报" --&gt; AGG</div></div>
+<p>职责矩阵：</p>
+<table>
+<tr><th>组件</th><th>职责</th><th>不做</th></tr>
+<tr><td>task_engine</td><td>入口归一、门控评估、两级仲裁、任务生命周期（运行时底座）、资源协调编排、状态聚合广播。子模块：入口网关／规则引擎／两级仲裁器／任务运行时（底座）／状态聚合</td><td>不执行业务算法；不直接操作硬件</td></tr>
+<tr><td>state_machine</td><td>L0 状态权威、迁移白名单与执行、受管模块激活/去激活与心跳健康、NOT_READY 门控语义源、状态迁移事件流。子模块：SystemFSM（状态集+白名单+IN_MOVE/回滚保护+迁移守卫）／模块生命周期管理器（功能组激活矩阵+心跳判死+FALLBACK）／状态广播器（system/state 广播+NOT_READY 语义）／审计与恢复器（迁移事件流+jsonl 审计+快照重建）</td><td>不管任务内容；不做 cgroup 细节调优（委托 sys_guard）</td></tr>
+<tr><td>sys_guard（框外·P1）</td><td>场景 FSM（优先级+事件）、系统资源档位执行（cgroup/温控/磁盘）</td><td>不定义系统状态；不触碰模块启停/传感供电（归 state_machine）；场景不得与当前系统状态冲突</td></tr>
+<tr><td>fsm-core</td><td>声明式状态机库（状态/迁移/守卫/事件/trace 导出）</td><td>不含任何业务语义；不管理跨进程状态</td></tr>
+<tr><td>mc 输入源仲裁与动作执行</td><td>控制权登记/抢占/超时释放、无权指令丢弃；动作执行（set_action 受理/合法迁移校验/动作态上报，action 允许集）</td><td>不评估任务合法性（门控与仲裁在 task_engine）</td></tr>
+</table>
+</section>
+<section class="card" id="5-6-关键机制设计"><h2>5.6 关键机制设计</h2>
+<h4>5.6.1 系统状态机（L0）</h4>
+<p><strong>状态集</strong>（对标 T1 Pro 9 态裁剪适配纯四足产品；LOCKED 对标 OpenBox 的「运输/维护锁定」语义）：</p>
+<div class="diagram"><div class="mermaid">stateDiagram-v2
+    [*] --&gt; INIT
+    INIT --&gt; LOCKED : 自检通过且锁定开关有效
+    INIT --&gt; STANDBY : 自检通过（显式激活）
+    LOCKED --&gt; STANDBY : 解锁确认
+    STANDBY --&gt; ACTIVE : 业务进行（语义态）
+    ACTIVE --&gt; STANDBY : 业务结束
+    STANDBY --&gt; PS_STANDBY : 省电策略触发
+    ACTIVE --&gt; PS_STANDBY
+    PS_STANDBY --&gt; STANDBY
+    PS_STANDBY --&gt; PS_DEEP : 深度省电策略
+    PS_DEEP --&gt; STANDBY : 唤醒（语音/触摸/App/任务）
+    STANDBY --&gt; OTA : 升级会话建立
+    ACTIVE --&gt; OTA
+    PS_STANDBY --&gt; OTA
+    OTA --&gt; STANDBY : 升级成功（重启例外）
+    STANDBY --&gt; E_STOP : 急停触发（任意业务态可入）
+    ACTIVE --&gt; E_STOP
+    PS_DEEP --&gt; E_STOP
+    OTA --&gt; E_STOP
+    E_STOP --&gt; STANDBY : 急停解除（人工确认）
+    STANDBY --&gt; SHUTDOWN : 关机流程
+    E_STOP --&gt; SHUTDOWN
+    SHUTDOWN --&gt; [*]</div></div>
+<table>
+<tr><th>状态</th><th>语义</th><th>活跃功能组（示例矩阵，模块清单见 §5.8.1 配置设计）</th><th>进入动作（资源侧）</th></tr>
+<tr><td>INIT</td><td>上电引导+自检；进程编排（组1：基座+HAL+实时域）</td><td>BASE, HAL_CORE, DIAGNOSIS</td><td>无（传感未上电）</td></tr>
+<tr><td>LOCKED</td><td>运输/维护锁定（可选配置；对标 OpenBox「仅标记，不执行应用操作」[EV-T1P-01]）</td><td>BASE, DIAGNOSIS</td><td>关节保持阻尼/下电</td></tr>
+<tr><td>STANDBY</td><td>就绪待命，业务可受理</td><td>BASE, HAL_CORE, DIAGNOSIS, INTERACTION, BUSINESS, CONNECTIVITY, PERCEPTION(按需)</td><td>传感按需上电</td></tr>
+<tr><td>ACTIVE</td><td>业务进行中（与 STANDBY 模块集相同，diff 为空——语义态，供观测/统计/计费口径，借鉴 T1 Pro Business 注释 [EV-T1P-01]）</td><td>同 STANDBY + NAVIGATION(按需)</td><td>无</td></tr>
+<tr><td>PS_STANDBY</td><td>轻省电（无任务 N 分钟）</td><td>BASE, HAL_CORE, DIAGNOSIS, INTERACTION(低功耗)</td><td>侧向/后向传感停流（对标 resource_stream_off tof [EV-T1P-01]）</td></tr>
+<tr><td>PS_DEEP</td><td>深省电</td><td>BASE, HAL_CORE, DIAGNOSIS, INTERACTION(仅语音唤醒)</td><td>感知栈 pause+导航栈 pause（对标 nav2 start_in_low_power [EV-T1P-19]）、可选感知板休眠</td></tr>
+<tr><td>OTA</td><td>升级中</td><td>BASE, DIAGNOSIS, OTA</td><td>业务全停</td></tr>
+<tr><td>E_STOP</td><td>急停</td><td>BASE, HAL_CORE, DIAGNOSIS（对标 EStop FG=HAL+Diagnosis [EV-T1P-01]）</td><td>关节阻尼、运动停止</td></tr>
+<tr><td>SHUTDOWN</td><td>关机流程（终态）</td><td>BASE, HAL_CORE, POWEROFF</td><td>等待从板下电（对标 shutdown_wait_ms [EV-T1P-01]）</td></tr>
+</table>
+<p><strong>迁移机制</strong>：</p>
+<ul><li>迁移请求（服务 <code>SystemMigrate</code>）：仅迁移白名单内的目标受理；受理≠成功，结果以状态话题/查询确认（对标 MigrateSystemState 语义 [EV-T1P-35]）。</li><li>迁移执行：<code>IN_MOVE</code> 期间拒绝新迁移与业务请求；差集模块逐个下发 ACTIVATE/DEACTIVATE（带超时与重试，对标 SmNodeService 异步语义与「降级必须成功」约定 [EV-T1P-03]）；全部确认后状态生效并广播；任一失败进入 <code>IN_ROLLBACK</code>（回滚上限可配，对标 max_rollback_count [EV-T1P-01]），回滚失败进入 <code>IN_FALLBACK</code>（降级：接受迁移请求以尽快恢复 [EV-T1P-09]）。</li><li>自动迁移守卫：<code>INIT→STANDBY</code> <strong>不得自动</strong>执行，必须显式激活（对标 Auto_transToReady=false [EV-T1P-11]）；其余自动迁移（省电/唤醒/急停）须声明触发条件并在事件流留痕（FR-TS-19）。</li><li>急停优先：任意业务态 → E_STOP 白名单直通（对标 EStop 可从多数状态进入 [EV-T1P-01]）；E_STOP 解除需人工确认。</li></ul>
+<p><strong>模块生命周期与健康管理</strong>：</p>
+<ul><li>受管模块协议：注册（模块名/功能组/能力声明）→ 心跳 1Hz 上报模块状态（8 态枚举：INITIALIZING/STARTING/INACTIVE/ACTIVATING/ACTIVE/DEACTIVATING/SHUTTINGDOWN——对标 SmState [EV-T1P-08]）→ 接收 ACTIVATE/DEACTIVATE/FALLBACK 指令并回报结果。</li><li>判死：心跳丢失 N 拍（默认 3 拍/3s，可配）标记 DEAD，按模块声明策略处置（重启/降级/仅告警）；T1 Pro 未公开判死阈值，本产品显式定义（开放问题 OP-TS-04 校准）。</li><li>与进程守护（OM 域）契约：state_machine 下发启停指令，OM 执行并回报；模块崩溃由 OM 先按重启策略拉起，超过阈值上报 state_machine 进入降级评估（对标 SM→EM(50081)→process_manager 调用链与 sm restart max 5 配置 [EV-T1P-10][EV-T1P-26]）。</li></ul>
+<h4>5.6.2 任务调度框架</h4>
+<p><strong>任务模型（TaskDescriptor，声明式规则文件）</strong>：</p>
+<pre class="code yaml"><code># rule/tasks/follow.yaml —— 示例：跟随任务
+task_type: follow
+class: long_task            # long_task | short_action | realtime_control | background
+priority: 50                # 对标 T1 优先级阶梯 10~100（shutdown 100/move 70/posture·follow 50/touch 25/idle 10）
+guards:                     # 门控（FR-TS-07）：全部声明式
+  system_state: [STANDBY, ACTIVE]
+  min_battery_percent: 6
+  forms: [quadruped]        # 形态约束
+  allow_held: false         # 牵手/托举时拒绝（对标 allow_held_state [EV-T1P-28]）
+  odom_trusted: true
+  health: {max_alert_level: warn}
+preempt:
+  can_preempt: [move, posture, photo]      # 可抢占这些任务
+  preemptible_by: [estop, manual_control]  # 被这些抢占
+confirm:                    # 二次确认（对标 RESULT_SECOND_CONFIRM=4 [EV-T1P-41]）
+  needed_when: "target_ambiguous"
+resources:
+  input_source: {name: follow, priority: 40, lease_ms: 1000}   # 控制权
+  scene: follow_mode        # 资源场景联动（FR-TS-10）
+  sensors: [front_rgbd]
+timeout: {start_ms: 10000, max_ms: 1800000}
+report: {state_topic: /robot/task/state, progress: true}</code></pre>
+<p><strong>仲裁流程（时序）</strong>：</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant E as 入口（语音/App/RC/SDK/自主）
+    participant GW as 入口网关
+    participant RU as 规则引擎
+    participant AR as 仲裁器
+    participant SM as state_machine（缓存态）
+    participant RT as 任务运行时〔底座〕
+    participant MC as mc（输入源）
+    participant DOM as 域执行器
+    E-&gt;&gt;GW: TaskRequest{source, task_type, params, token}
+    GW-&gt;&gt;RU: 归一请求
+    RU-&gt;&gt;SM: 门控评估（本地缓存：系统态/健康/电量）
+    alt 门控不满足
+        RU--&gt;&gt;E: REJECT + reason（NOT_READY/LOW_BATTERY/…）
+    else 门控通过
+        RU-&gt;&gt;AR: 提请仲裁
+        alt 无运行中长任务
+            AR--&gt;&gt;E: ACCEPT
+        else 运行中且不可抢占
+            AR--&gt;&gt;E: REJECT + reason=TASK_RUNNING（对标 REASON_TASK_RUNNING [EV-T1P-31]）
+        else 运行中且可抢占
+            AR-&gt;&gt;RT: 取消当前任务（ABORTED 传播）
+            RT-&gt;&gt;DOM: cancel（限时到达终态）
+            AR--&gt;&gt;E: PREEMPT
+        else 需二次确认
+            AR--&gt;&gt;E: CONFIRM（等待确认后重入）
+        end
+        AR-&gt;&gt;MC: 申请控制权（input_source 抢占）
+        AR-&gt;&gt;RT: 创建任务实例（task_id, CREATED→PENDING→RUNNING）
+        RT-&gt;&gt;DOM: 启动执行器（参数下发；动作型任务改经 set_action 直发 mc——IF-TS-15）
+        DOM--&gt;&gt;RT: 域状态上报（fsm-core 事件流）
+        RT--&gt;&gt;E: /robot/task/state 广播（全生命周期）
+        Note over RT,DOM: 结束：COMPLETED/FAILED/ABORTED/CANCELED&lt;br/&gt;→ 释放控制权/场景回落/资源释放
+    end</div></div>
+<p><strong>关键语义</strong>：</p>
+<ul><li><strong>任务焦点唯一 + 并行白名单</strong>（FR-TS-03）：占用任务焦点（本体控制/移动资源）的长任务全局唯一；无资源冲突任务（上肢/表情/灯光/闲时）经规则 <code>parallel</code> 白名单并行（对标 T1 upper_body 与移动并行、interaction 与 follow 并行 [EV-T1P-37]）。</li><li><strong>两级仲裁</strong>（FR-TS-03）：第一级逐任务策略（规则文件对其它任务逐一声明 override/reject/parallel/interrupt），第二级任务类别矩阵（类别间兜底裁决）——对标 T1 RuleManager + ActionManager 双层 [EV-T1P-38]。</li><li><strong>realtime 旁路</strong>（FR-TS-09）：遥控器/体感类 realtime_control 任务仅做电量与安全门控即放行，直通运动控制输入源（对标 rc_joystick realtime_task「高频实时指令，仅校验电量」[EV-T1P-37]）。</li><li><strong>mc 双指令面</strong>：连续流（velocity——须持控制权，IF-TS-11，租期看门狗续租）与离散动作（<strong>set_action</strong>，IF-TS-15——单一目标动作、受理≠完成、状态经 get_action 轮询/动作态上报 [EV-T1P-41]；链式中间迁移由 MC 内部状态机自动完成〔115 预备→101→102 行走，EV-T1P-14/36〕，不作为接口参数）。<strong>动作型任务（姿态/舞蹈/表演——whole_body、posture 类）不设独立域执行器</strong>：任务运行时经 set_action 直接驱动 mc，动作态经 <code>mc/common/state</code> 回流状态聚合；连续技能任务（跟随/导航/运镜）经 IF-TS-14 域执行器以 velocity 驱动。短动作快速通道（FR-TS-09）的最终落点即 set_action——动作迁移图唯一权威在运控域，编排侧订阅生成/引用（修复 T1 双份维护漂移 [EV-T1P-24]，§5.4.2.4）。</li><li><strong>token 与幂等</strong>：入口携带 token（source 不得为空——对标 ShutdownTask 拒绝空 source [EV-T1P-41]），同一 token 的重复请求幂等受理；task_id 全局单调分配。</li><li><strong>取消传播</strong>（FR-TS-06）：取消指令带 cancel_target 五粒度（按动作/按动画/按任务/按资源类型/全部——对标 AmCancel am_mode 0-4 [EV-T1P-41]）；执行器必须在声明时限内到达终态，超时按失败处理并强制释放资源。</li><li><strong>确认闭环</strong>：CONFIRM 裁决经统一确认意图通道（语音/App 均可确认）回传后重入仲裁（对标 need_confirm × semantic_intent confirmation [EV-T1P-41]）。</li><li><strong>仲裁式调度、无通用任务队列</strong>（DD-TS-12）：每个新请求与当前运行态<strong>即时裁决</strong>（ACCEPT/PREEMPT/REJECT/CONFIRM），当场反馈，不设用户任务 FIFO。排队语义只存在于受控局部：①编排任务的步骤队列（FR-TS-12 DAG 内部）；②PENDING 资源就绪等待（执行器启动中等）；③短动作缓存窗口（FR-TS-09「拒绝或缓存」）；④定时任务表（<strong>定时任务触发器</strong>维护，对标 T1 的 TimerEvent 机制〔其模块误名 scene_engine〕）。用户的<strong>顺序意图</strong>（「跳完舞<strong>然后</strong>跟我走」）由编排任务显式表达（一个任务内的步骤队列），与「先后说出的两个独立任务→即时仲裁」是两种不同入口语义。</li><li><strong>状态聚合</strong>（task_engine 右侧纵框子模块）：收集任务运行时的任务态＋各域执行器域状态上报（fsm-core 事件流），翻译映射为统一 TaskState 广播——上游（App/云/语音）只面对一套任务状态词汇（修复 T1 Pro 上游需适配 12+ 种状态话题的分散现状 [EV-T1P-18]）；常驻（无任务时亦订阅域状态）。</li></ul>
+<p><strong>控制权（输入源）仲裁</strong>（FR-TS-08，机制落位运动控制域，协议在本域定义）：</p>
+<table>
+<tr><th>源</th><th>默认优先级</th><th>默认租期</th><th>说明</th></tr>
+<tr><td>safety/emergency</td><td>100</td><td>∞</td><td>急停与安全接管</td></tr>
+<tr><td>remote_control（遥控器）</td><td>80</td><td>1000ms</td><td>物理遥控最高业务优先</td></tr>
+<tr><td>app_manual（App 摇杆）</td><td>70</td><td>1000ms</td><td></td></tr>
+<tr><td>sdk</td><td>60</td><td>1000ms</td><td></td></tr>
+<tr><td>task/follow</td><td>40</td><td>1000ms</td><td>任务执行器</td></tr>
+<tr><td>task/navigation</td><td>40</td><td>1000ms</td><td></td></tr>
+<tr><td>task/cinematic</td><td>40</td><td>1000ms</td><td></td></tr>
+</table>
+<p>规则：发速度/步态指令前必须持有控制权（MC 侧对无权/过期源指令直接丢弃——对标 mc 网关按输入源仲裁 [EV-T1P-30]）；高优先级绝对抢占、<strong>等优先级先入为主互斥</strong>、租期看门狗到期后按优先级顺延（对标 mc 仲裁三准则 [EV-T1P-29]）。<strong>动作型指令（set_action）不经输入源租期</strong>——离散动作非连续流：其互斥由任务焦点仲裁（FR-TS-03）与 mc 动作允许集（action_state 等价）双重保证。<strong>租期为「无续约静默窗口」而非任务时长</strong>：每帧 velocity（≥10Hz）即续租，持续发布可无限期持有（跟随/遥控均此模式）；连续静默 1000ms 判定持权方失联、保护性释放并顺延——故障兜底语义（DD-TS-09），正常结束走显式 DELETE。优先级与租期按产品阶段配置、修改仅存内存并以查询服务为准。T1 Pro 真机源表：rc=80 / vr=70 / app_proxy=90 / interaction=80 / pnc=80 / 配件源=90，全部 timeout 1000ms（SDK 文档滞后写 app_proxy=60——配置漂移教训：本产品要求<strong>配置与文档同源生成</strong> [EV-T1P-29][EV-T1P-41]）。</p>
+<h4>5.6.3 资源管理（资源场景，L2）</h4>
+<blockquote>承载模块＝sys_guard（框外·P1，不画入图 5-1——见 §5.5.2 画法约定）；任务侧联动入口＝IF-TS-10。</blockquote>
+<ul><li>场景 = 系统资源档位命名集合（对标 sys_guard scene 体系 [EV-T1P-20]）：<code>bootup</code>（开机优先交互/实时）、<code>normal</code>、<code>follow_mode</code>、<code>mapping</code>、<code>video_stream</code>、<code>ota</code>、<code>low_power</code>…每场景声明 cgroup 权重/配额、内存上限、温控与磁盘策略；<strong>传感供电掩码与导航栈 pause 不在场景内</strong>——归 state_machine 状态迁移差集动作（方向 A，DD-TS-06）。</li><li>触发：任务资源声明（任务启动/结束切换/回落，IF-TS-10）+ 事件（App 拉流→video_stream、温度→热降档；bootup 场景开机自举、20s 超时回落 normal，对标 [EV-T1P-21]）。系统状态迁移<strong>不</strong>直接驱动场景（方向 A 删 SM→sys_guard 边——模块集与传感资源随 L0 差集动作执行）。</li><li>约束：场景只调系统资源参数、不触碰模块启停——模块活跃集唯一权威在 state_machine；场景切换须与当前系统状态一致（如 OTA 态不得升高性能档，一致性守卫；修复 T1 Pro 三套场景词汇并存的缺口 [EV-T1P-20][EV-T1P-23]）。</li><li>竞争：场景带优先级（对标 scene priority 0-7 [EV-T1P-20]）；高优先级场景退出后回落到 fallback 场景（normal）。</li></ul>
+<h4>5.6.4 fsm-core 域状态机框架库（L1）</h4>
+<ul><li>形态：C++/Python 双语言库 + YAML 状态定义（状态/迁移/守卫/动作/超时），支持分层状态（substate）与并行区域（可选启用）。</li><li>内建：非法迁移拒绝与审计、迁移事件导出（接入统一 trace 通道——对标 /robot/trace/events [EV-T1P-34]）、离线回放（事件流→状态序列重建，支撑 NFR-TS-04）。</li><li>接入要求（FR-TS-17）：任务/会话/导航/建图等业务域状态机必须基于 fsm-core；运动控制实时域豁免库强制，但必须满足「状态语义协议」（状态枚举上报 + 迁移事件导出 + 非法迁移拒绝）。</li><li>治理规范（§5.8.1）：哪些状态进哪一层的判据——涉及全局门控或跨域消费 → L0/L2；域内行为 → L1；毫秒级实时 → 域内自管（协议约束）。</li></ul>
+</section>
+<section class="card" id="5-7-关键接口-关键模块间"><h2>5.7 关键接口（关键模块间）</h2>
+<p>命名前缀 <code>/robot</code>（原 <code>/qdog</code>，占位随产品品牌定）；消息包 <code>robot_msgs</code>；服务命名保留对标 T1 的动词语义（Set/Get/Migrate 等，如 <code>/robot/mc/set_input_source</code> 对标 SetMcInputSource）。所有服务使用统一响应模型（DD-TS-07（§5.13））。</p>
+<table>
+<tr><th>编号</th><th>模块对（From → To）</th><th>接口</th><th>类型</th><th>语义要点</th></tr>
+<tr><td>IF-TS-01</td><td>大脑 Agent / 定时任务触发器 / 本体 APP → <strong>task_engine</strong></td><td><code>/robot/task/request</code>（<code>TaskRequest.srv</code>）</td><td>service</td><td>归一入口：source/token/task_type/params；响应=受理裁决（ACCEPT/REJECT/PREEMPT/CONFIRM）+ task_id + reason</td></tr>
+<tr><td>IF-TS-02</td><td>大脑 Agent / 本体 APP → <strong>task_engine</strong></td><td><code>/robot/task/control</code>（<code>TaskControl.srv</code>）</td><td>service</td><td>pause/resume/cancel；取消粒度：by_task/by_resource/all（对标 AmCancel [EV-T1P-27]）</td></tr>
+<tr><td>IF-TS-03</td><td><strong>task_engine</strong> → 全系统（本体 APP/大脑）</td><td><code>/robot/task/state</code>（<code>TaskState.msg</code>）</td><td>topic</td><td>任务全生命周期广播：task_id/type/stage/progress/error</td></tr>
+<tr><td>IF-TS-04</td><td>任意 → <strong>task_engine</strong></td><td><code>/robot/task/list</code>、<code>/robot/task/precheck</code></td><td>service</td><td>当前/历史任务查询；dry-run 门控评估（FR-TS-11）</td></tr>
+<tr><td>IF-TS-05</td><td><strong>state_machine</strong> → 全系统</td><td><code>/robot/system/state</code>（<code>SystemState.msg</code>）</td><td>topic</td><td>state + status(IN_MOVE/…) + 活跃功能组；1Hz 心跳级 + 事件触发即时</td></tr>
+<tr><td>IF-TS-06</td><td>运维/OTA/安全 → <strong>state_machine</strong></td><td><code>/robot/system/migrate</code>（<code>SystemMigrate.srv</code>）</td><td>service</td><td>受理语义，结果看状态话题（对标 [EV-T1P-35]）</td></tr>
+<tr><td>IF-TS-07</td><td><strong>task_engine</strong>（规则引擎）↔ <strong>state_machine</strong></td><td><code>/robot/system/query</code>（<code>SystemQuery.srv</code>）</td><td>service</td><td>门控评估用：当前态/模块健康/迁移历史（本地订阅缓存+按需查询）</td></tr>
+<tr><td>IF-TS-08</td><td>受管模块 → <strong>state_machine</strong></td><td><code>/robot/system/module/heartbeat</code>（<code>ModuleHeartbeat.msg</code>）</td><td>topic</td><td>1Hz；模块状态 8 态枚举（对标 [EV-T1P-08]）</td></tr>
+<tr><td>IF-TS-09</td><td><strong>state_machine</strong> → OM 进程守护/受管模块</td><td><code>/robot/system/module/action</code>（<code>ModuleAction.srv</code>）</td><td>service</td><td>ACTIVATE/DEACTIVATE/FALLBACK 下发与结果回报（对标 SmNodeService [EV-T1P-03]）</td></tr>
+<tr><td>IF-TS-10</td><td><strong>task_engine</strong> → <strong>sys_guard</strong></td><td><code>/robot/resource/state</code>、<code>/robot/resource/command</code></td><td>topic/service</td><td>当前系统资源档位广播；档位切换指令（经一致性守卫；sys_guard→OS 为 cgroup/温控下发）</td></tr>
+<tr><td>IF-TS-11</td><td>小脑技能执行器 → <strong>mc 输入源仲裁</strong>（MC 域承接）</td><td><code>/robot/mc/set_input_source</code>（<code>SetInputSource.srv</code>）</td><td>service</td><td>控制权申请/释放/查询；租期=看门狗续租窗口（对标 [EV-T1P-29]，协议本域定义、MC 域实现）</td></tr>
+<tr><td>IF-TS-12</td><td>各状态机（task_engine/state_machine/域执行器）→ 可观测性</td><td><code>/robot/trace/state_events</code>（<code>StateTransitionEvent.msg</code>）</td><td>topic</td><td>统一迁移事件流：owner/from/to/trigger/guard_results/timestamp（FR-TS-18）</td></tr>
+<tr><td>IF-TS-13</td><td>全系统（公共消息）</td><td><code>robot_msgs/CommonResponse</code>、<code>CommonState</code>、<code>CommonTaskResponse</code></td><td>消息</td><td>统一响应模型（对标 [EV-T1P-25]），枚举语义见 DD-TS-07</td></tr>
+<tr><td>IF-TS-14</td><td><strong>task_engine</strong>（任务运行时）→ 域执行器（小脑技能执行器等）</td><td><code>/robot/task/executor/ctl</code>（<code>ExecutorCtl.srv</code>）＋域状态上报话题</td><td>service+topic</td><td>域执行器契约：start/pause/resume/cancel（取消限时到达终态，FR-TS-06）；域状态回报汇入状态聚合（IF-TS-03 上游）——本域定义契约，各业务域实现；适用于<strong>连续技能任务</strong>（跟随/导航/运镜）</td></tr>
+<tr><td>IF-TS-15</td><td><strong>task_engine</strong>（任务运行时）→ <strong>mc（动作执行面，MC 域承接）</strong></td><td><code>/robot/mc/set_action</code>（<code>SetMcAction.srv</code>）＋<code>/robot/mc/get_action</code> 查询＋<code>mc/common/state</code> 动作态上报</td><td>service+topic</td><td><strong>离散动作指令面</strong>（对标 T1 SetMcAction [EV-T1P-41]）：动作型任务（姿态/舞蹈/表演）与短动作快速通道（FR-TS-09）的执行通道；请求只带<strong>单一目标动作</strong>（链式中间迁移由 MC 内部状态机自动 [EV-T1P-14/36]）；受理≠完成——状态轮询/订阅至 TRANSITION→RUNNING→终态；取消经取消语义限时到达安全态（FR-TS-06）；不走输入源租期（§5.6.2）；动作迁移图唯一权威在运控域</td></tr>
+</table>
+<blockquote>接口表与逻辑视图（§5.5.2）依赖边对应（图中 4 条边：大脑→task_engine＝IF-TS-01；task_engine→技能执行器＝<strong>IF-TS-14＋IF-TS-15 合并标注</strong>——set_action 运行期直达 mc 动作面，图中不单独画边；技能执行器→mc 仲裁＝IF-TS-11；task_engine→state_machine＝IF-TS-05/07）；框外协同实体（sys_guard/OM/定时任务触发器等不画入图的模块）以「模块对」列显式登记；与核心业务流（§5.9）中的调用序列一一对应——三视图互校是评审检查点（§5.14）。</blockquote>
+</section>
+<section class="card" id="5-8-支撑设计"><h2>5.8 支撑设计</h2>
+<h3>5.8.1 数据与配置设计</h3>
+<table>
+<tr><th>配置/数据</th><th>路径（规划）</th><th>内容</th><th>治理</th></tr>
+<tr><td>系统状态机定义</td><td><code>cfg/system/system_modes.yaml</code></td><td>状态集、迁移白名单、功能组×状态矩阵、状态动作、回滚/关机参数</td><td>评审冻结；变更走版本化发布</td></tr>
+<tr><td>受管模块清单</td><td><code>cfg/system/modules.yaml</code></td><td>模块→功能组、心跳策略、降级策略、启动依赖</td><td>新模块接入模板</td></tr>
+<tr><td>任务规则库</td><td><code>cfg/tasks/rule/*.yaml</code></td><td>TaskDescriptor 全集（§5.6.2 示例）</td><td>每任务类型一文件；支持 OTA 增量</td></tr>
+<tr><td>场景库</td><td><code>cfg/scene/*.yaml</code></td><td>场景→系统资源档位（cgroup 权重/配额/内存上限/温控/磁盘）、优先级、fallback（传感掩码/导航 pause 归 system_modes.yaml 状态动作）</td><td>与系统状态一致性 CI 校验</td></tr>
+<tr><td>控制权默认表</td><td><code>cfg/mc/input_sources.yaml</code></td><td>源→优先级/租期</td><td>产品阶段可调</td></tr>
+<tr><td>迁移审计日志</td><td><code>/persist/log/system/transitions.jsonl</code></td><td>全部迁移事件（含被拒绝的非法请求）</td><td>只增不改；上传云端（OM 域）</td></tr>
+</table>
+<p><strong>分层判据（状态治理规范）</strong>：① 拒绝业务/跨域消费/影响安全 → 必须进 L0 或以 L0 门控表达；② 资源档位变化 → L2 场景；③ 域内行为且外部仅需订阅 → L1 域状态机；④ 毫秒级实时控制 → 域内自管（协议约束上报）。</p>
+<h3>5.8.2 部署与资源预算</h3>
+<table>
+<tr><th>组件</th><th>板位</th><th>进程形态</th><th>预算（V1 目标）</th><th>说明</th></tr>
+<tr><td>state_machine</td><td>运控板</td><td>独立进程（system.slice）</td><td>CPU ≤ 2%（单核口径）、RSS ≤ 80MB</td><td>对标 aim_sm_app 轻量形态（SM 仅管状态与 7 模块心跳，负载极低 [EV-T1P-01]）</td></tr>
+<tr><td>task_engine</td><td>运控板</td><td>独立进程（interaction.slice）</td><td>CPU ≤ 5%、RSS ≤ 150MB</td><td>对标 task_engine 为全图最重节点（31 服务端/58 客户端 [EV-T1P-27]），本设计以规则引擎+聚合器收敛复杂度</td></tr>
+<tr><td>sys_guard</td><td>运控板</td><td>独立进程（system.slice）</td><td>CPU ≤ 1%、RSS ≤ 50MB</td><td>对标 sys_guard 场景职责 [EV-T1P-20]</td></tr>
+<tr><td>fsm-core</td><td>随宿主</td><td>库</td><td>零常驻开销</td><td>—</td></tr>
+<tr><td>启动顺序</td><td>—</td><td>—</td><td>—</td><td>基座（进程管理/系统状态机/健康）组1 → 实时域/HAL 组1 → 业务/交互 组2 → 感知/导航 组3（低功耗起步，对标 orin 组2 delay 8s + start_in_low_power [EV-T1P-19][EV-T1P-26]）</td></tr>
+</table>
+<h3>5.8.3 容错、安全与降级</h3>
+<table>
+<tr><th>故障场景</th><th>行为（必须）</th><th>对标依据</th></tr>
+<tr><td>state_machine 崩溃</td><td>OM 自动重启（上限可配）；重启后由心跳+持久化快照重建状态；期间运动控制独立可用、新业务按 NOT_READY 拒绝（入口网关本地缓存上次有效态+保守拒绝）</td><td>对标 sm restart max 5 [EV-T1P-26]；NFR-TS-03</td></tr>
+<tr><td>受管模块心跳丢失</td><td>判死（3 拍）→ 按模块策略：重启 / 降级（FALLBACK 协议必须成功）/ 仅告警；连续判死升级 HDS 告警</td><td>对标 Heartbeat dead 机制 [EV-T1P-07]</td></tr>
+<tr><td>状态迁移中失败</td><td>IN_ROLLBACK 回滚（上限 10 次）；回滚失败 IN_FALLBACK 接受迁移尽快恢复</td><td>对标 [EV-T1P-01][EV-T1P-09]</td></tr>
+<tr><td>任务执行器无响应</td><td>启动超时/取消超时 → 任务 FAILED、资源强制释放（控制权/场景回落）</td><td>修复 T1 Pro 无显式原子释放的缺口（§5.4.1.3-3）</td></tr>
+<tr><td>控制权源异常</td><td>租期到期自动释放；持权模块崩溃由 MC 侧超时回收</td><td>对标 input_source timeout 自动回落 [EV-T1P-29]</td></tr>
+<tr><td>急停</td><td>任意业务态直达 E_STOP；仅保留 HAL_CORE+DIAGNOSIS；解除需人工确认</td><td>对标 EStop FG [EV-T1P-01]</td></tr>
+<tr><td>迁移审计不可用</td><td>本地 jsonl 兜底记录，恢复后补传</td><td>—</td></tr>
+</table>
+<h3>5.8.4 可配置性与可扩展性</h3>
+<ul><li><strong>新增任务类型</strong>（NFR-TS-05 演练项）：写 <code>cfg/tasks/rule/&lt;type&gt;.yaml</code> + 实现域执行器（继承执行器接口：start/pause/resume/cancel + 域状态上报）→ 注册进 modules.yaml → 完成。框架代码零修改。</li><li><strong>新增受管模块</strong>：modules.yaml 登记（功能组/心跳/降级策略）→ 实现 IF-TS-08/09 协议 → 进入功能组矩阵。</li><li><strong>新增 L0 状态</strong>：system_modes.yaml 增加状态（迁移白名单/活跃矩阵/动作）→ CI 一致性校验（矩阵×场景约束）。</li><li><strong>机型裁剪</strong>：功能组按机型启用（入门单板：PERCEPTION 组裁剪，矩阵自动收缩）；LOCKED/PS_DEEP 等状态可按产品线配置启停。</li></ul>
+</section>
+<section class="card" id="5-9-核心业务流"><h2>5.9 核心业务流</h2>
+<p>本节以两条核心业务流贯通逻辑视图（§5.5.2）的全部关键模块：<strong>流程一</strong>覆盖任务侧（受理→门控→两级仲裁→抢占→状态聚合），<strong>流程二</strong>覆盖状态侧（冷启动→模块激活→就绪→业务态）。每条流程均给出<strong>简单流程图</strong>（控制流骨架）与<strong>详细时序图</strong>（接口级交互）；参与实体≥逻辑视图关键模块（外域实体按需出场）。</p>
+<h3>5.9.1 流程一：任务受理·两级仲裁·抢占（UC-A「跳舞中被跟随抢占」）</h3>
+<p><strong>场景定义</strong>：用户说「请跳个舞」；舞蹈执行中，用户再说「请跟我走」。</p>
+<p>图 5-2 流程一·简单流程图（控制流骨架）</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    AG["大脑 Agent〔意图〕"]
+    APP["本体 APP〔App/遥控/SDK〕"]
+    TM["task_engine&lt;br/&gt;网关→规则→两级仲裁→运行时"]
+    SM["state_machine&lt;br/&gt;〔状态门控〕"]
+    SC["sys_guard&lt;br/&gt;〔资源切换/回落〕"]
+    DOM2["小脑执行器·跟随"]
+    MC["mc〔输入源仲裁·动作执行〕"]
+    U(["用户"])
+
+    U --&gt; AG --&gt;|"/robot/task/request: dance"| TM
+    APP -.-&gt;|"归一转发"| TM
+    SM --&gt;|"system_state 门控"| TM
+    TM --&gt;|"set_action: dance 动作（IF-TS-15）"| MC
+    MC --&gt;|"动作态上报（mc/common/state）"| TM
+    TM --&gt;|切 dance 资源场景| SC
+    U --&gt;|"「跟我走」"| AG
+    AG --&gt;|"/robot/task/request: follow"| TM
+    TM --&gt;|"仲裁: follow(50) &gt; dance(45)"| TM
+    TM --&gt;|"取消动作(限时): task#1 ABORTED"| MC
+    SC --&gt;|"dance 资源回落"| SC
+    TM --&gt;|"获准: task#2 + 场景 follow_mode"| DOM2
+    DOM2 --&gt;|"申请 follow 源(pri=40)"| MC
+    DOM2 --&gt;|"velocity(≥10Hz 续租)"| MC
+    DOM2 --&gt;|"域状态→状态聚合"| TM</div></div>
+<p>图 5-3 流程一·详细时序图（接口级）</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant AG as 大脑 Agent〔意图〕
+    participant TM as task_engine〔网关/规则/仲裁/运行时〕
+    participant SM as state_machine〔状态门控〕
+    participant SC as sys_guard〔资源〕
+    participant DOM as 小脑执行器〔跟随〕
+    participant MC as mc〔输入源仲裁·动作执行〕
+    participant APP as 本体 APP〔播报/镜像〕
+
+    Note over U,APP: 阶段一：「请跳个舞」（动作型任务——无独立执行器）
+    U-&gt;&gt;AG: 语音「请跳个舞」
+    AG-&gt;&gt;TM: TaskRequest{voice, dance, token}（IF-TS-01）
+    TM-&gt;&gt;SM: 门控查询（IF-TS-07，本地缓存 ≤2ms）
+    SM--&gt;&gt;TM: ACTIVE ✓（IF-TS-05 订阅态）
+    Note over TM: 进程内：规则评估（FR-TS-07）→&lt;br/&gt;两级仲裁：无冲突 → ACCEPT，task#1
+    TM-&gt;&gt;SC: 切 dance 资源场景（IF-TS-10）
+    TM-&gt;&gt;MC: set_action（dance whole_body 动作，IF-TS-15——单一目标、受理≠完成）
+    MC--&gt;&gt;TM: 受理+task_id；动作态 TRANSITION→RUNNING（mc/common/state → 状态聚合，EV-T1P-41）
+    Note over TM,MC: 动作型任务不走输入源租期（IF-TS-11 为 velocity 连续流专用）；&lt;br/&gt;互斥由任务焦点仲裁＋mc 动作允许集保证（§5.6.2）
+    TM--&gt;&gt;U: task/state 广播（IF-TS-03）+ APP 联动播报
+
+    Note over U,APP: 阶段二：跳舞中「请跟我走」→ 抢占
+    U-&gt;&gt;AG: 语音「请跟我走」
+    AG-&gt;&gt;TM: TaskRequest{voice, follow, token}
+    TM-&gt;&gt;SM: 门控查询 ✓
+    Note over TM: 规则：电量≥6%/odom 可信（FR-SP-09 的 /odom/status 门控）
+    Note over TM: 两级仲裁：第一级 policy=override（50&gt;45）&lt;br/&gt;第二级类别矩阵兜底 → PREEMPT（FR-TS-03）
+    TM-&gt;&gt;MC: 取消 dance 动作（IF-TS-15 取消语义，限时到达安全态，FR-TS-06）→ task#1 ABORTED
+    TM-&gt;&gt;SC: dance 资源场景回落
+    TM--&gt;&gt;AG: PREEMPT + task#2
+    TM-&gt;&gt;SC: 切 follow_mode 资源场景（cgroup 算力/温控档位）
+    TM-&gt;&gt;SM: 任务资源声明：front_rgbd 按需激活（差集动作经 OM，IF-TS-09）
+    TM-&gt;&gt;DOM: 启动跟随执行器（IF-TS-14）
+    DOM-&gt;&gt;MC: 抢占 follow 源（pri=40，租期=看门狗续租窗口）
+    Note over DOM,MC: 跟随稳态：velocity ≥10Hz 每帧续租（DD-TS-09）；&lt;br/&gt;实时避障只叠写不抢权（§5.6.2/边界注记）
+    DOM--&gt;&gt;TM: follow 域状态（锁定→FOLLOWING）
+    TM--&gt;&gt;APP: 状态聚合广播（IF-TS-03）+ TTS 确认</div></div>
+<p>两级仲裁明细（阶段二核心裁决）：</p>
+<table>
+<tr><th>仲裁层</th><th>判定</th><th>依据</th></tr>
+<tr><td>第一级：逐任务策略</td><td>follow 规则对 <code>whole_body</code>（舞蹈）声明 policy = <strong>override</strong></td><td>优先级 50 &gt; 45（阶梯对标 T1 [EV-T1P-37]）</td></tr>
+<tr><td>第二级：类别矩阵</td><td>long_task vs whole_body_action → 抢占</td><td>兜底裁决（对标 [EV-T1P-38]）</td></tr>
+</table>
+<p>若舞蹈声明不可打断 → 当场 REJECT+<code>NOT_INTERRUPTIBLE</code>（「等我跳完」），同样不排队（DD-TS-12：仲裁式调度、无通用任务队列——排队语义仅在编排 DAG/PENDING/短动作缓存/定时表四个受控局部）。</p>
+<p>异常路径速查：目标丢失（3s 防抖→停步不取消）/ 过暗（质量随流门控）/ 抱起（held_state→ABORTED）/ 遥控接管（rc=80 抢 follow=40）/ 急停（任意态→E_STOP，仅留 HAL_CORE+DIAGNOSIS）。</p>
+<blockquote><strong>「调度器」在哪里</strong>：无单一调度器部件——规则引擎（能不能做）→ 两级仲裁器（先做哪件）→ 任务运行时（持有与执行）＋资源侧控制权仲裁/sys_guard 协同。</blockquote>
+<h3>5.9.2 流程二：系统状态迁移与模块激活（冷启动→就绪→业务）</h3>
+<p><strong>场景定义</strong>：整机上电 → 自检 → 激活就绪（STANDBY）→ 进入业务（ACTIVE）。</p>
+<p>图 5-4 流程二·简单流程图</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    PM["OS/进程守护&lt;br/&gt;〔systemd+OM 分组拉起〕"]
+    SM["state_machine&lt;br/&gt;SystemFSM+模块管理器"]
+    OM["OM 进程守护"]
+    TSCH["task_engine"]
+    DOM["小脑技能执行器等受管模块"]
+
+    PM --&gt;|"分组拉起（基座→治理→业务）"| SM
+    SM --&gt;|"加载 9 态+白名单+激活矩阵"| SM
+    SM --&gt;|"Startup 态: diff 激活（含传感上电）"| OM
+    OM --&gt;|"StartApps（分组启停）"| DOM
+    DOM --&gt;|"心跳 1Hz（IF-TS-08）"| SM
+    SM --&gt;|"IN_MOVE: 矩阵 diff 执行+回滚保护"| OM
+    SM --&gt;|"显式激活 RPC（不自动迁移）"| SM
+    SM --&gt;|"广播 system_state（IF-TS-05）"| TSCH
+    TSCH --&gt;|"门控放行任务受理"| TSCH</div></div>
+<p>图 5-5 流程二·详细时序图（接口级；冷启动链对标 T1 sm.log 实测 [EV-T1P-10]）</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant OS as OS/进程守护〔systemd+OM〕
+    participant SM as state_machine〔SystemFSM/模块管理器〕
+    participant OM as OM 进程守护
+    participant MOD as 受管模块（task_engine/感知/导航…）
+    participant TSCH as task_engine〔入口〕
+
+    OS-&gt;&gt;SM: 分组拉起（基座组先行；FR：NFR-TS-03 前提）
+    Note over OS: sys_guard（框外）同期自举资源场景：&lt;br/&gt;bootup→20s→normal cgroup 档位 [EV-T1P-21]，不经 SM
+    Note over SM: 加载状态集+迁移白名单+功能组×状态激活矩阵&lt;br/&gt;（声明式 cfg，FR-TS-13）
+    SM-&gt;&gt;SM: SYSTEM_AUTO 迁入 Startup（状态机内部）
+    SM-&gt;&gt;OM: ModuleAction: 差集模块 ACTIVATE（IF-TS-09）
+    OM-&gt;&gt;MOD: StartApps 分组启停（进程守护契约）
+    loop 稳态巡检
+        MOD--&gt;&gt;SM: 心跳 1Hz + 模块状态（IF-TS-08；判死 3 拍可配）
+    end
+    Note over SM: 自检通过但**不自动迁移**（DD-TS-10，对标&lt;br/&gt;Auto_transToReady=false [EV-T1P-11]）
+    OS-&gt;&gt;SM: SystemMigrate: →STANDBY（显式激活；IF-TS-06 受理语义）
+    Note over SM: IN_MOVE 期间拒绝业务与迁移（FR-TS-14）；&lt;br/&gt;失败→IN_ROLLBACK（上限可配）→IN_FALLBACK 兜底
+    SM--&gt;&gt;TSCH: 广播 system_state=STANDBY（IF-TS-05）
+    Note over TSCH: 门控放行：任务受理恢复（NOT_READY 解除）
+    SM-&gt;&gt;OM: 状态动作：传感按需上电（差集动作，IF-TS-09）
+    TSCH-&gt;&gt;TSCH: 首个业务任务受理 → 状态迁入 ACTIVE（语义态，diff 为空）
+    SM--&gt;&gt;MOD: 全部迁移经白名单校验+审计事件流（IF-TS-12，FR-TS-19）</div></div>
+<p>要点：① 迁移服务返回「受理≠成功」，结果以 system_state/查询确认（对标 [EV-T1P-35]）；② 心跳判死→按模块策略重启/降级（FALLBACK 协议必须成功，对标 [EV-T1P-03/07]）；③ state_machine 崩溃由 OM 重启并 3s 内重建状态（NFR-TS-03），期间 mc 实时域独立可用。</p>
+</section>
+<section class="card" id="5-10-三方依赖"><h2>5.10 三方依赖</h2>
+<p>本域（TS）对外部组件的依赖清单——<strong>基座直接复用</strong>（T1 实用同款开源件）与<strong>机制参照</strong>（对标形态，非代码依赖）两类；均为 §5.11.3 参考实现收敛的结果：</p>
+<table>
+<tr><th>依赖</th><th>类别</th><th>用途（引入位置）</th><th>T1 Pro 实用情况</th><th>许可</th></tr>
+<tr><td><strong>AimRT</strong>（github.com/AimRT/AimRT）</td><td>基座·直接复用</td><td>应用运行时框架：RPC/通道/线程池/插件（task_engine 与 state_machine 的进程基座）</td><td>T1 全部 em 应用的运行时（aimrte 增强层闭源）〔EV-T1P-60〕</td><td>Apache-2.0</td></tr>
+<tr><td><strong>ROS 2（rclcpp/rclcpp_action/rclcpp_lifecycle）</strong></td><td>基座·直接复用</td><td>节点模型/服务/话题/QoS；action 目标句柄语义（任务运行时范本）；lifecycle 状态机底座（SystemFSM）</td><td>T1 实用 Humble〔EV-T1P-60〕</td><td>Apache-2.0</td></tr>
+<tr><td><strong>Fast DDS + iceoryx</strong></td><td>基座·直接复用</td><td>跨板 DDS 通信与板内零拷贝（状态广播/心跳/任务通道的传输层）</td><td>T1 实用 2.6.12/2.95〔EV-T1P-57/60〕</td><td>Apache-2.0</td></tr>
+<tr><td><strong>nav2 lifecycle_manager + bond_core</strong></td><td>机制参照</td><td>受管节点组启停+bond 心跳模式（模块管理器对标，FR-TS-15）</td><td>T1 板上实跑 nav2〔EV-T1P-19〕</td><td>Apache-2.0/BSD-3</td></tr>
+<tr><td><strong>systemd（cgroup v2/dbus）</strong></td><td>基座·直接复用</td><td>sys_guard 系统资源档位下发的执行后端（§5.6.3）</td><td>T1 sys_guard 同路径〔EV-T1P-20〕</td><td>LGPL-2.1</td></tr>
+<tr><td><strong>ros2_tracing / rosbag2</strong></td><td>工具·直接复用</td><td>状态迁移事件流导出与回放（FR-TS-18，§5.6.4）</td><td>T1 有 /robot/trace/events 雏形〔EV-T1P-34〕</td><td>Apache-2.0</td></tr>
+<tr><td><strong>twist_mux</strong>（ros-teleop）</td><td>机制参照</td><td>输入源「优先级+超时复用」仲裁模式（mc 输入源仲裁对标，IF-TS-11；本域不实现，归 MC 域）</td><td>T1 mc 自研同机制〔EV-T1P-29〕</td><td>BSD-3</td></tr>
+<tr><td><strong>micro-ROS/system_modes</strong></td><td>机制参照</td><td>系统模式（mode/transition）管理模式（SystemFSM 对标；上游已停维护，仅借鉴）</td><td>T1 SM 闭源自研〔EV-T1P-01〕</td><td>Apache-2.0</td></tr>
+</table>
+<p>依赖治理原则：① 基座类锁定版本随 OS 基础服务统一管理（勿逐模块自带副本——T1 20+ 份冗余交付物教训〔EV-T1P-57〕）；② 机制参照类不引入代码依赖，仅指导接口与测试设计；③ 新增依赖须经本章登记与许可审查（联动 OP-SP-07 模式）。</p>
+</section>
+<section class="card" id="5-11-功能-规格与工作量分析"><h2>5.11 功能、规格与工作量分析</h2>
+<h3>5.11.1 概念界定：软件功能 vs 软件规格</h3>
+<p>特性设计中「功能」与「规格」是两个层面的问题，估算工作量前必须先分清：</p>
+<table>
+<tr><th>维度</th><th>软件功能（Function）</th><th>软件规格（Specification）</th></tr>
+<tr><td>回答的问题</td><td>系统<strong>能做什么</strong>（WHAT）</td><td>做到<strong>什么程度、什么条件下成立</strong>（HOW WELL / HOW MUCH）</td></tr>
+<tr><td>表述形态</td><td>「动词 + 对象」的能力单元，如「任务仲裁」「状态门控」</td><td>量化参数与约束：范围、性能、容量、精度、状态数、时序、兼容性</td></tr>
+<tr><td>判断口径</td><td>有无——能否演示</td><td>优劣——能否验收（每条规格应能映射出至少一个测试用例）</td></tr>
+<tr><td>在本说明书中的载体</td><td>FR 条目的行为表述（§5.3.1/5.3.2）</td><td>FR 内嵌量化约束 + NFR 全部（§5.3.3）</td></tr>
+<tr><td>与工作量的关系</td><td>决定「骨架」：模块有无、接口多少</td><td>决定「体量与风险」：同一功能规格翻倍，工作量可翻数倍</td></tr>
+</table>
+<p>使用规则：</p>
+<ol><li><strong>先功能后规格</strong>：功能集冻结范围；规格把功能从「可演示」变成「可验收」。规格未定的功能不具备估算条件。</li><li><strong>规格是工作量的主驱动</strong>：同为「任务仲裁」功能，规格从「2 类任务×3 个门控」到「20 类任务×两级仲裁×5 种裁决×70 种 reason×P99≤50ms」，工作量相差 3~5 倍。</li><li><strong>参考实现决定起点</strong>：功能与规格相同，有开源实现可复用（集成/移植）与从零实现，工作量相差可达一个数量级——这正是下表「参考开源仓」列存在的意义。</li></ol>
+<h3>5.11.2 估算口径与假设</h3>
+<ul><li><strong>代码量</strong>：交付源代码行数（含必要注释；不含第三方开源库本体、消息生成代码与构建脚本）；<strong>单位统一为 K LoC（千行代码，Kilo Lines of Code）</strong>，全文一致。</li><li><strong>参考优先序</strong>（按 §6.1 实证）：① T1 Pro <strong>实用</strong>的开源基座（AimRT、ROS 2、iceoryx、Fast DDS、nav2 生命周期体系，EV-T1P-60）——直接复用；② T1 闭源模块的<strong>开源近亲</strong>（aimrt_process_manager 等）——对标移植；③ 社区同类最佳实现——机制借鉴。<strong>T1 Pro 的业务模块（task_engine/SM/sys_guard/mc 输入源仲裁等）经核实闭源无公开仓（EV-T1P-60）</strong>，只能作架构与参数参照（全盘备份实证），不能作代码来源。</li><li>含硬件/系统联调（cgroup、进程编排、性能达标）的行已计入联调系数。</li><li><strong>×5 冰山系数（V0.12 起）</strong>：表中代码量 = 纯开发估算 ×5，放大系数涵盖隐含的「冰山之下」工作量——需求理解、工作任务拆解、架构设计、开发与调测、集成调测等；因此数字可直接作为排期依据（工作路标 §5.12 即基于此口径）。</li></ul>
+<h3>5.11.3 功能-规格-参考实现-工作量对照表</h3>
+<blockquote>参考实现列约定：<strong>上行</strong>＝启元 T1 Pro 是否提供对应的开源实现（基座/近亲/SDK 附带物，附仓址）；<strong>下行</strong>＝业界能提供类似功能的开源实现（附仓址）。</blockquote>
+<table>
+<tr><th>功能名称</th><th>功能简介</th><th>规格（量化要点，对应 FR/NFR）</th><th>可参考的开源代码仓与对应实现目录</th><th>代码量预估</th></tr>
+<tr><td>任务入口网关（P0）</td><td>把语音、App、遥控器、SDK、定时任务触发器等异构入口的请求归一为统一 TaskRequest 协议并受理，含 token 校验、幂等与二次确认意图回传</td><td>≥5 入口（语音/App/遥控/SDK/定时任务）归一 TaskRequest；token 非空校验+幂等；确认意图回传闭环（FR-TS-01）</td><td><strong>T1 Pro：提供基座</strong>——AimRT https://github.com/AimRT/AimRT（智元开源，T1 全部应用的运行时框架，<code>src/aimrt_rpc</code>、<code>src/plugins/ros2_plugin</code> 服务/通道封装可复用；入口业务层 task_engine 闭源）&lt;br&gt;<strong>业界开源</strong>：ros2/rclcpp https://github.com/ros2/rclcpp（<code>rclcpp_action/include/rclcpp_action</code>——goal/确认/取消句柄语义）</td><td>20~30 K LoC</td></tr>
+<tr><td>声明式规则引擎（P0）</td><td>以 YAML 规则文件驱动各类任务的前置门控评估与预检（dry-run），框架不写死任何任务类型</td><td>≥20 类任务规则文件；门控维度 ≥10（电量/形态/系统态/健康/odom/网络/牵手/障碍/充电/来源）；YAML 加载+校验+dry-run 预检（FR-TS-02/07/11）</td><td><strong>T1 Pro：未提供</strong>（task_engine 闭源；<code>rule/*.yaml</code> 格式有全盘备份实证可照抄 EV-T1P-37）&lt;br&gt;<strong>业界开源</strong>：BehaviorTree.CPP https://github.com/BehaviorTree/BehaviorTree.CPP（<code>src/conditions</code>——条件节点+黑板）；PlanSys2 https://github.com/IntelligentRoboticsLabs/PlanSys2（<code>plansys2_core</code>——domain 条件求值）</td><td>15~25 K LoC</td></tr>
+<tr><td>两级仲裁器（P0）</td><td>对新任务请求与运行中任务作出裁决（接受/拒绝/抢占/挂起/需确认），维护任务焦点唯一性与并行白名单</td><td>long/short/realtime 三级；优先级 0-100；5 种裁决+reason ≥70；并行白名单；P99≤50ms（FR-TS-03、NFR-TS-01）</td><td><strong>T1 Pro：未提供</strong>（RuleManager+ActionManager 双层闭源实证 EV-T1P-38）&lt;br&gt;<strong>业界开源</strong>：ros2/rclcpp https://github.com/ros2/rclcpp（<code>rclcpp_action/src/server_goal_handle.cpp</code>——异步目标抢占/取消状态机）；PlanSys2 https://github.com/IntelligentRoboticsLabs/PlanSys2（<code>plansys2_executor</code>——执行编排）</td><td>25~40 K LoC</td></tr>
+<tr><td>任务运行时（底座，P0）</td><td>任务实例全生命周期容器（TaskState 状态机宿主，对标 T1 WorkerManager）：task_id/token 分配、执行器下发与取消限时传播、并行白名单执行</td><td>TaskState 全生命周期（含 PAUSED/确认）；task_id 全局单调；取消限时传播（FR-TS-04/05/06）</td><td><strong>T1 Pro：提供基座</strong>——AimRT https://github.com/AimRT/AimRT（executor——线程池可复用；任务运行时业务闭源）&lt;br&gt;<strong>业界开源</strong>：ros2/rclcpp https://github.com/ros2/rclcpp（<code>rclcpp_action/src/server_goal_handle.cpp</code>——异步目标生命周期范本）</td><td>15~22 K LoC</td></tr>
+<tr><td>状态聚合（P0）</td><td>收集运行时任务态＋各域执行器状态上报，翻译为统一 TaskState 对外广播与查询（IF-TS-03 出口，常驻订阅）</td><td>状态广播 ≥10Hz；多域状态接入；历史 ≥100 条（FR-TS-05/11）</td><td><strong>T1 Pro：提供基座</strong>——AimRT https://github.com/AimRT/AimRT（<code>src/aimrt_channel</code>——通道复用；聚合业务闭源）&lt;br&gt;<strong>业界开源</strong>：ros2/rclcpp https://github.com/ros2/rclcpp（话题/QoS 广播与订阅缓存范式）</td><td>10~13 K LoC</td></tr>
+<tr><td>控制权（输入源）仲裁（P0）</td><td>以「源+优先级+租期」管理运动控制指令权：登记、抢占、超时自动释放与无权指令丢弃</td><td>源注册 ≥8；优先级抢占+等优先级先入为主+1000ms 租期看门狗；无权指令丢弃（FR-TS-08、DD-TS-09）</td><td><strong>T1 Pro：未提供</strong>（mc 闭源；真机源表实证 EV-T1P-29）&lt;br&gt;<strong>业界开源</strong>：twist_mux https://github.com/ros-teleop/twist_mux（多路速度指令按优先级+超时复用，ROS2 已发布）；ros2_control https://github.com/ros-controls/ros2_control（<code>controller_manager/src/controller_manager.cpp</code>——硬件接口 claim/互斥）</td><td>10~15 K LoC</td></tr>
+<tr><td>系统状态机 SystemFSM（P0）</td><td>持有整机 L0 生命周期状态与迁移白名单，对全系统业务请求做就绪门控（迁移受理、守卫与回滚）</td><td>9 态+迁移白名单；status 5 态（IN_MOVE/ROLLBACK/FALLBACK…）；门控判定 ≤2ms；MigrateSystemState 受理语义；自动迁移守卫（FR-TS-13/14/19、NFR-TS-02）</td><td><strong>T1 Pro：未提供</strong>（SM 闭源，9 态迁移表实证 EV-T1P-01）&lt;br&gt;<strong>业界开源</strong>：system_modes https://github.com/micro-ROS/system_modes（<code>system_modes/src</code>——mode/transition 管理；上游已声明停止维护，仅作机制参考）；ros2/rclcpp https://github.com/ros2/rclcpp（<code>rclcpp_lifecycle/src/rclcpp_lifecycle/state_machine.cpp</code>——状态机底座）</td><td>15~22 K LoC</td></tr>
+<tr><td>状态广播器（P0）</td><td>system/state 周期+事件广播与 NOT_READY 门控语义源（IF-TS-05 出口），供 task_engine 等订阅缓存</td><td>1Hz 心跳级+事件触发即时广播；state/status/活跃功能组；订阅缓存（FR-TS-14/16、NFR-TS-02）</td><td><strong>T1 Pro：未提供</strong>（SmSystemStateChannel 广播闭源实证 EV-T1P-01）&lt;br&gt;<strong>业界开源</strong>：ros2/rclcpp https://github.com/ros2/rclcpp（话题与生命周期事件发布范式）</td><td>5~8 K LoC</td></tr>
+<tr><td>模块生命周期管理器（P0）</td><td>按功能组×状态激活矩阵驱动受管模块启停，含心跳判死、降级回退与激活差集执行</td><td>受管模块 ≥30；心跳 1Hz；判死 3 拍可配；ACTIVATE/DEACTIVATE/FALLBACK 协议+超时重试；激活矩阵 diff 执行（FR-TS-15）</td><td><strong>T1 Pro：未提供</strong>（SmNodeService 闭源 EV-T1P-03/07；但 T1 板上实跑的开源 nav2 提供完整同类机制 EV-T1P-19）&lt;br&gt;<strong>业界开源</strong>：navigation2 https://github.com/ros-navigation/navigation2（<code>nav2_lifecycle_manager/src/lifecycle_manager.cpp</code>——受管节点组启停+bond 心跳）；bond_core https://github.com/ros/bond_core（<code>bondcpp</code>——两进程心跳与超时判定）</td><td>20~30 K LoC</td></tr>
+<tr><td>进程守护契约（P0，与 OM 域协同）</td><td>定义 state_machine 与进程守护间的启停指令、执行回报与崩溃重启策略协议（重启后重建由审计与恢复器承担）</td><td>启停指令执行+回报；崩溃重启策略（上限可配）；与激活矩阵一致</td><td><strong>T1 Pro：提供（近亲）</strong>——aimrt_process_manager https://github.com/Link-U-OS/aimrt_process_manager（智元系灵渠OS 组件，对应板上 em/process_manager 体系，yaml 应用编排/守护/环境注入可直接对标，EV-T1P-60）&lt;br&gt;<strong>业界开源</strong>：systemd https://github.com/systemd/systemd（<code>src/core</code>——单元生命周期与 cgroup 执行后端）</td><td>10~20 K LoC</td></tr>
+<tr><td>统一消息与响应模型 robot_msgs（P0）</td><td>定义全系统统一的服务响应语义（框架码/业务态/reason/task_id）与公共消息类型包</td><td>CommonState 11 值+reason ≥70；SensorHeader/组织点云等 ≥40 消息；C++/Python 生成；文档与配置同源（FR-TS-16、DD-TS-07）</td><td><strong>T1 Pro：提供（SDK 附消息定义源码）</strong>——aimdk_msgs 完整 .msg/.srv（本仓 <code>docs/primebot/sdk_t1-v1.0.0.0/aimdk_msgs/</code>，结构对标 EV-T1P-25/45）&lt;br&gt;<strong>业界开源</strong>：common_interfaces https://github.com/ros2/common_interfaces（ROS 2 标准消息包组织与生成范式）</td><td>5~10 K LoC</td></tr>
+<tr><td>系统集成测试与联调（P0）</td><td>跨组件用例族（仲裁全矩阵/迁移矩阵/故障注入/性能压测）的构建与达标验证</td><td>§5.14 用例族全通过：仲裁全矩阵/迁移全矩阵/心跳判死注入/state_machine kill 演练/性能压测</td><td><strong>T1 Pro：未提供</strong>&lt;br&gt;<strong>业界开源</strong>：navigation2 https://github.com/ros-navigation/navigation2（<code>nav2_system_tests</code>——系统级测试组织范式）；rosbag2 https://github.com/ros2/rosbag2（用例录制回放）</td><td>15~25 K LoC（测试代码）</td></tr>
+<tr><td>系统资源守护 sys_guard（P1）</td><td>对标 T1 sys_guard 场景功能：按场景下发 cgroup 档位（CPU/内存）、温控降频、磁盘清理，随任务/负载联动切换并保证一致性</td><td>场景 ≥10、优先级 0-7；cgroup v2 权重/配额/内存上限下发；温控/磁盘联动；一致性守卫；切换 ≤500ms（FR-TS-10、DD-TS-06）</td><td><strong>T1 Pro：未提供</strong>（sys_guard 闭源；场景 cgroup 参数全盘实证 EV-T1P-20）&lt;br&gt;<strong>业界开源</strong>：systemd https://github.com/systemd/systemd（<code>src/core/cgroup.c</code>——cgroup v2 属性 API；ROS 生态无直接等价，自研薄层封装）</td><td>15~25 K LoC</td></tr>
+<tr><td>fsm-core 状态机框架库（P1）</td><td>声明式状态机公共库（状态/迁移/守卫/事件/超时），供业务域状态机复用，导出迁移事件并支持离线回放</td><td>分层/并行状态机；守卫/动作/超时；迁移事件导出（trace 主题）；离线回放；C++/Python 绑定；单测覆盖 ≥85%（FR-TS-17/18、NFR-TS-04/06）</td><td><strong>T1 Pro：未提供</strong>（各域状态机自研闭源）&lt;br&gt;<strong>业界开源</strong>：py_trees https://github.com/py-trees/py_trees（行为/状态树抽象）；boost-sml https://github.com/boost-ext/sml（header-only FSM，迁移表表达）；SMACC2 https://github.com/robosoft-ai/SMACC2（<code>smacc2</code>——ROS2 事件驱动状态机库）</td><td>40~60 K LoC</td></tr>
+<tr><td>状态审计与回放工具（P1，审计与恢复器完整交付）</td><td>审计与恢复器宿主：记录全部状态迁移事件（含被拒非法请求）与崩溃快照重建，提供命令行查询与离线回放</td><td>迁移 jsonl 审计（含被拒非法请求）；崩溃后心跳+快照重建 ≤3s（NFR-TS-03，P0 收尾）；CLI 查询任意域状态/历史；事件流回放重建（FR-TS-18/19）</td><td><strong>T1 Pro：未提供</strong>（trace 埋点通道存在但闭源 EV-T1P-34）&lt;br&gt;<strong>业界开源</strong>：ros2_tracing https://github.com/ros2/ros2_tracing（<code>tracetools</code>——统一 trace 事件基础设施）；rosbag2 https://github.com/ros2/rosbag2（录制回放）</td><td>10~15 K LoC</td></tr>
+</table>
+<h3>5.11.4 汇总与配比建议</h3>
+<table>
+<tr><th>范围</th><th>代码量</th></tr>
+<tr><td>V1（P0 全部，12 行）</td><td>约 190~240 K LoC</td></tr>
+<tr><td>全量（P0+P1，15 行）</td><td>约 270~325 K LoC</td></tr>
+</table>
+<ul><li><strong>配比建议</strong>：2 名工程师并行（1 名资深负责 fsm-core + state_machine 骨架〔DD-TS-03 框架先行〕，1 名负责 task_engine + 集成测试）；阶段划分见 §5.12 工作路标。</li><li><strong>代码量前三</strong>：fsm-core（40~60 K LoC）、两级仲裁器（25~40 K LoC）、模块生命周期管理器（20~30 K LoC；任务运行时拆分后 15~22 K LoC 紧随其后）——框架先行可摊薄后续每个业务域的接入成本，与 DD-TS-03/11 的次序一致。</li><li><strong>复用率判断</strong>：本域可直接复用的开源部分主要是<strong>基座</strong>（AimRT 的 RPC/通道/线程池、ROS 2 action 与生命周期语义、nav2 lifecycle_manager 模式、bond 心跳）；规则/仲裁/状态定义等业务逻辑为自研，T1 Pro 提供的是<strong>参数级参照</strong>（23 个规则文件、67 个 reason、9 态迁移表均已实证，EV-T1P-01/37/41），不是代码来源。</li><li><strong>联动</strong>：OP-TS-03（抢占矩阵默认值）与 OP-TS-04（判死阈值）的实机校准计入「系统集成测试」行，不单列。</li></ul>
+</section>
+<section class="card" id="5-12-工作路标"><h2>5.12 工作路标</h2>
+<p>按<strong>功能最小集逐阶段叠加</strong>划分 4 个阶段（代码量口径 = §5.11.3 ×5 含冰山系数，逐项一一对应；阶段间叠加即 §5.11.4 全量约 270~325 K LoC）。<strong>工作项粒度＝图 5-1 中的每个框</strong>（task_engine 五框、state_machine 四框逐一成行；框外/库/跨域项单列）；<strong>优先级排序原则</strong>：P0 主干（基础功能打通：任务闭环＋状态门控＋运动任务跨域协同）→ 阶段一/二，P1 与稳健性收尾（不影响基础功能打通——审计恢复、资源档位、框架库）→ 阶段三，全量达标验证 → 阶段四：</p>
+<table>
+  <thead>
+    <tr><th>关键路标</th><th>主要工作项</th><th>工作项描述</th><th>代码量</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="5"><b>阶段一</b><br/>2026.11.30<br/>task_engine 框架闭环<br/>（图上半框五框·<br/>单任务端到端含两级仲裁）</td>
+      <td>入口网关</td>
+      <td>五入口（语音/App/遥控/SDK/定时）TaskRequest 归一 + token 非空/幂等/来源白名单 + 二次确认意图回传闭环（FR-TS-01）；随行冻结 robot_msgs v1 语义（消息基座随首个消费方先行，非独立里程碑行）</td>
+      <td>20~30 K LoC</td>
+    </tr>
+    <tr>
+      <td>规则引擎</td>
+      <td>YAML 规则加载/校验 + ≥10 维基础门控评估（电量/形态/系统态/健康/odom 等，FR-TS-02/07）；系统态门控以 SystemState 订阅缓存+本地桩接入（阶段二切真实源，IF-TS-05/07 不变）；dry-run 预检与任务/历史查询（FR-TS-11，P1 增量）后置阶段三收口</td>
+      <td>15~25 K LoC</td>
+    </tr>
+    <tr>
+      <td>两级仲裁器</td>
+      <td>第一级逐任务策略 + 第二级类别矩阵（ACCEPT/REJECT/PREEMPT/CONFIRM）+ 优先级阶梯 + P99≤50ms（FR-TS-03、NFR-TS-01）</td>
+      <td>25~40 K LoC</td>
+    </tr>
+    <tr>
+      <td>任务运行时（底座）</td>
+      <td>TaskState 全生命周期（CREATED→PENDING→RUNNING→终态）+ task_id 分配 + 执行器下发/收尾（IF-TS-14）+ 并行白名单执行/取消限时传播（FR-TS-04/05/06）</td>
+      <td>15~22 K LoC</td>
+    </tr>
+    <tr>
+      <td>状态聚合</td>
+      <td>任务态+域状态翻译为统一 TaskState 广播（IF-TS-03，≥10Hz）；阶段一打通单任务广播闭环，多域状态接入随阶段二真实执行器联调</td>
+      <td>10~13 K LoC</td>
+    </tr>
+    <tr>
+      <td rowspan="5"><b>阶段二</b><br/>2026.12.31<br/>state_machine 治理<br/>与跨域协同<br/>（图下半框三框＋两跨域项）</td>
+      <td>SystemFSM</td>
+      <td>9 态迁移白名单 + IN_MOVE/回滚保护 + 自动迁移守卫（INIT→STANDBY 不自动激活，DD-TS-10；FR-TS-13/14/19）——就位后替换阶段一门控桩</td>
+      <td>15~22 K LoC</td>
+    </tr>
+    <tr>
+      <td>状态广播器</td>
+      <td>system/state 周期+事件广播、NOT_READY 门控语义源与订阅缓存（IF-TS-05；FR-TS-14/16）</td>
+      <td>5~8 K LoC</td>
+    </tr>
+    <tr>
+      <td>控制权（输入源）仲裁</td>
+      <td>租期看门狗续租 + 等优先级先入为主 + 无权丢弃（FR-TS-08/DD-TS-09，与 MC 域联调）——运动类任务（跟随/导航/遥控接管）的基础前提，抢占后控制权移交流程合龙</td>
+      <td>10~15 K LoC</td>
+    </tr>
+    <tr>
+      <td>进程守护契约</td>
+      <td>与 OM 域联调启停/回报/重启策略——契约先行，为模块管理器提供 IF-TS-09 执行端</td>
+      <td>10~20 K LoC</td>
+    </tr>
+    <tr>
+      <td>模块生命周期管理器</td>
+      <td>功能组激活矩阵与差集动作（含传感供电掩码/导航栈 pause——方向 A 归还项）+ 1Hz 心跳判死 + FALLBACK 降级（FR-TS-15/DD-TS-06）——依赖守护契约执行端</td>
+      <td>20~30 K LoC</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><b>阶段三</b><br/>2027.3.31<br/>平台化与收尾<br/>（框外/库/P1 增量）</td>
+      <td>fsm-core 状态机框架库</td>
+      <td>声明式状态机 + trace 导出 + 离线回放 + 双语言绑定；迁移阶段一 TaskState/阶段二 SystemFSM 手写实现至库（FR-TS-17/18）</td>
+      <td>40~60 K LoC</td>
+    </tr>
+    <tr>
+      <td>sys_guard 系统资源守护（框外·P1）</td>
+      <td>资源场景库 + cgroup/温控/磁盘下发 + 一致性守卫（FR-TS-10/DD-TS-06，对标 T1 sys_guard；不画入图 5-1——§5.5.2 画法约定）</td>
+      <td>15~25 K LoC</td>
+    </tr>
+    <tr>
+      <td>状态审计与回放工具（审计与恢复器完整交付）</td>
+      <td>jsonl 迁移审计+崩溃快照重建 ≤3s（FR-TS-19/NFR-TS-03，P0 收尾——按优先级自阶段二后置，不影响基础功能打通）+ trace 导出（消费 fsm-core，IF-TS-12）+ CLI 查询/回放与 dry-run/历史查询收口（FR-TS-18/11）</td>
+      <td>10~15 K LoC</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><b>阶段四</b><br/>2027.5.31<br/>集成达标</td>
+      <td>系统级用例族联调</td>
+      <td>仲裁全矩阵/迁移全矩阵/UC-A 端到端（真实门控源+控制权）/多入口并发（§5.14 用例族前半）</td>
+      <td>9~15 K LoC</td>
+    </tr>
+    <tr>
+      <td>性能达标与故障注入</td>
+      <td>NFR 压测 + kill/心跳判死演练 + 回放一致性（§5.14 用例族后半）</td>
+      <td>6~10 K LoC</td>
+    </tr>
+  </tbody>
+</table>
+<blockquote><strong>行序＝阶段内依赖顺序</strong>：阶段一按流水线序——入口网关→规则引擎→两级仲裁器→任务运行时（底座）→状态聚合（对外广播口）；阶段二——SystemFSM→状态广播器，控制权仲裁（MC 域联调）可并行→进程守护契约→模块生命周期管理器（依赖契约执行端）；阶段三——fsm-core→sys_guard（并行）→审计回放〔消费 fsm-core trace〕。运行时为底座：先于聚合落地、承载上层全部裁决（V0.21 布局）。<br/><strong>优先级排序原则</strong>：阶段一/二＝P0 主干——基础功能打通的最小集（任务受理-仲裁-执行-回报闭环＋系统状态门控＋运动任务所需控制权/守护契约两项跨域协同）；阶段三＝不影响基础功能打通的稳健性与平台化项按优先级后置——审计与恢复器（jsonl/快照重建，P0 收尾）、sys_guard（P1）、fsm-core（P1）、dry-run/历史查询（FR-TS-11 P1 增量）随本阶段收口；阶段四＝全量达标验证。<br/><strong>robot_msgs 消息基座</strong>（§5.11.3，5~10 K LoC）：随阶段一先行——v1 语义（CommonState/reason/task_id/SystemState 等）冻结为网关与规则引擎的开发前置，随首个消费方交付、不单列里程碑行；阶段二 SystemFSM 就位即消费同版消息（接口不变）。<br/><strong>图 5-1 模块对账</strong>（九框→路标行，一一对应）：task_engine 五框<strong>全部在阶段一</strong>（入口网关／规则引擎／两级仲裁器／任务运行时／状态聚合，五行）；state_machine 三框在<strong>阶段二</strong>（SystemFSM／状态广播器／模块生命周期管理器），第四框<strong>审计与恢复器</strong>按优先级后置至阶段三工具行完整交付；跨域/框外/库项——控制权仲裁与进程守护契约（阶段二，MC/OM 域协同）／sys_guard（阶段三，框外·P1）／fsm-core（阶段三，库）／robot_msgs（阶段一随行基座）。<br/><strong>fsm-core 蓝本策略</strong>（阶段三，非依赖倒挂）：阶段一的手写 TaskState 与阶段二的手写 SystemFSM 是 fsm-core API 设计的需求输入（从真实用例提炼，避免闭门造车）；对本域＝先跑通后抽取（迁移成本已计入 fsm-core 代码量），对后续业务域（VI/MC/NV）＝框架先行（阶段三交付后直接复用）——与 DD-TS-03 不矛盾。<br/><strong>跨域依赖</strong>：进程守护契约↔OM 域、控制权仲裁联调↔MC 域、执行器下发↔小脑技能执行器——阶段里程碑依赖对应域并行进度；阶段一端到端演示允许最小执行器桩，阶段二起替换真实域执行器。<br/>每阶段末以可演示里程碑验收：<strong>阶段一＝task_engine 单任务端到端</strong>（语音「站起来」→入口网关→规则门控〔桩〕→两级仲裁→任务运行时→执行器→状态聚合广播→完成播报）；<strong>阶段二＝UC-A 双任务抢占全链路＋系统状态迁移闭环</strong>（真实门控源+控制权抢占+模块激活）；<strong>阶段三＝fsm-core 迁移＋资源场景联动＋审计回放收口</strong>；<strong>阶段四＝NFR 全达标</strong>。</blockquote>
+</section>
+<section class="card" id="5-13-关键设计决策记录-DD"><h2>5.13 关键设计决策记录（DD）</h2>
+<table>
+<tr><th>编号</th><th>决策</th><th>备选与取舍</th><th>结论依据</th></tr>
+<tr><td>DD-TS-01</td><td>采用「系统状态（L0）/域状态机（L1）/资源场景（L2）」三层模型，而非单一集中式状态管理</td><td>全集中（方案 A）被否决：实时域不可行、单点放大、异质抽象漏水</td><td>§5.4.2.4；T1 Pro 实证三分事实 [EV-T1P-01/27/29]</td></tr>
+<tr><td>DD-TS-02</td><td>系统状态机独立为 state_machine 服务；状态与状态内状态（READY/MOVE/ROLLBACK/FALLBACK）分离</td><td>迁移/回滚做成独立状态（否决：状态爆炸）；只做 status 不做白名单（否决：失去防护）</td><td>继承 T1 Pro SystemStatus 设计 [EV-T1P-09]</td></tr>
+<tr><td>DD-TS-03</td><td>提取 fsm-core 声明式状态机框架库：业务域强制复用、实时域豁免（协议约束）</td><td>仅协议统一（T1 Pro 现状，方案 B）：重复实现与双份迁移图漂移已实证 [EV-T1P-24]</td><td>§5.4.2.4 方案 C 价值量化</td></tr>
+<tr><td>DD-TS-04</td><td>任务仲裁 = 全局单长任务 + 声明式规则 + 抢占矩阵 + 二次确认</td><td>多长任务并行+资源锁（否决 V1：消费级场景复杂度收益低、仲裁可解释性差）；纯先来后到（否决：无法表达安全抢占）</td><td>对标 AmRequest 实证形态 [EV-T1P-27/31]，简化并显式化</td></tr>
+<tr><td>DD-TS-05</td><td>控制权仲裁位于运动控制域（mc），任务框架经协议申请/释放</td><td>仲裁上收到 task_engine（否决：引入任务框架与运动控制的同步依赖，实时域风险）</td><td>对标 SetMcInputSource 位置 [EV-T1P-29]；NFR-TS-06</td></tr>
+<tr><td>DD-TS-06</td><td><strong>系统资源档位独立 sys_guard</strong>（对标 T1 sys_guard：cgroup/温控/磁盘），受一致性守卫约束；<strong>传感供电/模块启停归还 state_machine 差集动作</strong>（对标 SmAction+resource_stream）</td><td>并入 state_machine（否决：T1 实证独立进程、职责节奏不同）；并入 task_engine（否决：档位还有非任务触发源）</td><td>T1 双链实证 [EV-T1P-20/01/10/26]</td></tr>
+<tr><td>DD-TS-07</td><td>全系统统一响应模型：框架码（0/1）+ CommonState（11 值）+ reason 枚举 + task_id</td><td>各模块自定义错误码（否决：上游适配成本、测试不可枚举）</td><td>直接继承 T1 Pro CommonState（已量产验证且 SDK 已教育用户 [EV-T1P-25]）</td></tr>
+<tr><td>DD-TS-08</td><td>二次确认为仲裁裁决的一种（CONFIRM），确认后重入仲裁</td><td>确认环节做在入口（否决：多入口各自实现不一致）</td><td>对标 arbitration_result=3 [EV-T1P-27]</td></tr>
+<tr><td>DD-TS-09</td><td>控制权=带租期的租约（lease）：优先级抢占+到期自动释放</td><td>无租约的显式申请/释放（否决：持权方崩溃即死锁）</td><td>对标 timeout 自动回落机制 [EV-T1P-29]</td></tr>
+<tr><td>DD-TS-10</td><td>INIT→STANDBY 不自动迁移，须显式激活</td><td>上电自动就绪（否决：上电即失控风险）</td><td>对标 Auto_transToReady=false [EV-T1P-11]</td></tr>
+<tr><td>DD-TS-11</td><td>受管模块协议全量接入（含感知/导航/语音），进程守护听命于状态机</td><td>维持 T1 Pro 式窄覆盖（7 模块）（否决：省电与一致性受限，实证缺口 §5.4.2.5）</td><td>修复实证缺口 [EV-T1P-01/19/26]</td></tr>
+<tr><td>DD-TS-12</td><td>采用<strong>仲裁式调度</strong>，不设通用用户任务队列：新请求与当前运行态即时裁决（ACCEPT/PREEMPT/REJECT/CONFIRM），当场反馈</td><td>队列式 FIFO（否决：①出队时门控前提大概率已失效，须全量重仲裁——等于把仲裁推迟还多付队列状态管理〔过期/取消/失效清理〕；②实体机器人「稍后自动执行」行为不可预期；③T1 Pro 量产实证即无排队语义——冲突即拒绝或抢占 [EV-T1P-31/38]）。顺序意图由编排任务表达（FR-TS-12）；预约类需求以 ENQUEUE 裁决扩展（OP-TS-08），不建常驻队列</td><td>§5.6.2 关键语义；[EV-T1P-31/38]</td></tr>
+</table>
+</section>
+<section class="card" id="5-14-验证与测试考虑"><h2>5.14 验证与测试考虑</h2>
+<table>
+<tr><th>层级</th><th>用例族</th><th>覆盖需求</th></tr>
+<tr><td>单元</td><td>fsm-core：全遍历迁移测试、非法迁移拒绝、守卫求值、事件导出/回放一致性</td><td>FR-TS-17/18/19、NFR-TS-04</td></tr>
+<tr><td>单元</td><td>规则引擎：表驱动门控评估（电量边界/形态矩阵/系统态组合）</td><td>FR-TS-02/07</td></tr>
+<tr><td>集成</td><td>仲裁矩阵：多入口并发请求 × 当前任务状态全组合（含抢占/取消传播/二次确认）</td><td>FR-TS-01/03/06、NFR-TS-01</td></tr>
+<tr><td>集成</td><td>系统状态全迁移矩阵：合法/非法迁移、迁移中拒绝、回滚/降级路径</td><td>FR-TS-13/14/19</td></tr>
+<tr><td>集成</td><td>模块生命周期：心跳判死→降级→恢复；state_machine kill 演练</td><td>FR-TS-15、NFR-TS-03</td></tr>
+<tr><td>集成</td><td>控制权与动作面：多源并发抢占/租期到期/无权指令丢弃；set_action 受理/单一目标/状态轮询/非法动作迁移拒绝</td><td>FR-TS-08/09、DD-TS-09（对标 [EV-T1P-41/36]）</td></tr>
+<tr><td>系统（仿真）</td><td>事件流回放：录制任务序列→离线重建状态机轨迹与审计比对</td><td>FR-TS-18/20、NFR-TS-04</td></tr>
+<tr><td>系统（实机）</td><td>对标复现 T1 Pro use case：姿态切换链（躺→站）双入口冲突；升级中拒绝运动；急停抢占一切</td><td>FR-TS-03/07/08/14；对标 [EV-T1P-14]</td></tr>
+<tr><td>系统（仿真/实机）</td><td>UC-A 端到端走查（§5.9）：舞蹈→跟随抢占全链路；异常注入（目标丢失/抱起/遥控接管/过暗）</td><td>FR-TS-01/03/04/06/08/10；跨域 FR-SP-07/10</td></tr>
+<tr><td>性能</td><td>NFR-TS-01/02 压测；启动时间（基座组→业务可受理）</td><td>NFR-TS-01/02</td></tr>
+</table>
+</section>
+<section class="card" id="5-15-开放问题"><h2>5.15 开放问题</h2>
+<table>
+<tr><th>编号</th><th>问题</th><th>影响</th><th>建议</th></tr>
+<tr><td>OP-TS-01</td><td>ACTIVE 与 STANDBY 是否合并（T1 Pro Business 与 Ready diff 为空，仅语义区分）</td><td>状态集简洁性 vs 观测口径</td><td>V1 保留 ACTIVE 语义态（App/云需要「忙碌」口径），评审后可裁剪</td></tr>
+<tr><td>OP-TS-02</td><td>LOCKED（开箱/运输锁定）是否适用于本产品包装与开箱体验</td><td>L0 状态集</td><td>产品定义确认；机制保留、配置启停</td></tr>
+<tr><td>OP-TS-03</td><td>抢占矩阵默认值（哪些任务可被语音打断）</td><td>体验</td><td>交互走查后冻结 V1 默认表</td></tr>
+<tr><td>OP-TS-04</td><td>心跳判死阈值（默认 3s/3 拍）与降级策略分模块细化</td><td>可用性 vs 误判</td><td>实机长测数据校准</td></tr>
+<tr><td>OP-TS-05</td><td>PS_DEEP 下语音唤醒与感知下电的产品权衡（保留哪路传感）</td><td>功耗指标</td><td>与功耗联合实测后定</td></tr>
+<tr><td>OP-TS-06</td><td>深省电是否引入感知算力板休眠（T1 Pro 实测大脑板空闲 7.9W，休眠收益需量化）</td><td>功耗</td><td>引用电源管理特性域（第 10 章，规划中）结论</td></tr>
+<tr><td>OP-TS-07</td><td>组合任务/编排注入（FR-TS-12）V1 是否随 SDK 首发开放</td><td>范围</td><td>建议 P2 延后，先稳定单任务语义</td></tr>
+<tr><td>OP-TS-08</td><td>是否需要「预约执行」语义（App 侧「等当前任务结束后执行」）：候选方案为第五种裁决 ENQUEUE——带过期时间、出队时全量重仲裁，而非常驻队列</td><td>仲裁器复杂度 / 交互体验</td><td>V1 不做；App 需求明确后再评估（DD-TS-12）</td></tr>
+</table>
+</section>
+<section class="card" id="5-16-对标证据引用清单"><h2>5.16 对标证据引用清单</h2>
+<table>
+<tr><th>证据</th><th>内容</th><th>来源</th></tr>
+<tr><td>EV-T1P-01</td><td>SM 9 态/迁移白名单/功能组×状态矩阵/状态动作（resource_stream_off tof 等）/回滚与关机参数</td><td>B：<code>rk_full/robot/software/sm/bin/cfg/qy3576_t1_v2d1_2X.yaml:98-165</code>（<code>:72-93</code> 功能组；<code>:18-29</code> 参数）</td></tr>
+<tr><td>EV-T1P-02</td><td>SM 直接拉起的受管模块仅 7 个（master 5 + slave0 2）；<code>low_level_dev_excluded_modules: [mc]</code></td><td>B：同上 <code>:63-70</code>、dump <code>:405-411</code></td></tr>
+<tr><td>EV-T1P-03</td><td>SmNodeService ExecuteAction/ExecuteFallback 异步语义、「降级必须成功」</td><td>B：<code>connx/share/protocol/proto/aimdk/protocol/sm/sm_service.proto:43-57</code></td></tr>
+<tr><td>EV-T1P-04</td><td>SmAction 仅有 ACTIVATE/DEACTIVATE 两类；DIFF=前后状态功能组差集</td><td>B：<code>sm/sm_internal.proto:7-26</code></td></tr>
+<tr><td>EV-T1P-05</td><td>三分治理结构（SM/task_engine/mc 分立）与接口关系</td><td>A：§7.4 模块接口关系图、§7.3 模块清单</td></tr>
+<tr><td>EV-T1P-06</td><td>系统级 RPC：MigrateSystemState/TriggerEStop/GetSystemState/SetChildState 等</td><td>B：<code>sm/sm_rpc.proto:10-49</code>、<code>sm_api.proto:66-81</code></td></tr>
+<tr><td>EV-T1P-07</td><td>心跳机制：nsm_plugin 1Hz 上报；SM 周期打印存活/死亡名单</td><td>B：<code>sm_channel.proto:8-15</code>、sm dump <code>:52-60</code>、<code>sm.log:1-2</code>、<code>agent.yaml:48-56</code></td></tr>
+<tr><td>EV-T1P-08</td><td>SmState 模块状态 8 枚举；SmNodeState/SmModuleState 结构</td><td>B：<code>sm_state.proto:8-31</code></td></tr>
+<tr><td>EV-T1P-09</td><td>SystemStatus：IN_INITIAL/IN_READY/IN_MOVE（拒业务）/IN_ROLLBACK（拒）/IN_FALLBACK（收迁移）</td><td>B：<code>SystemStatus.msg:3-7</code>、<code>sm_api.proto:33-39</code>、<code>SmSystemState.msg:7-8</code></td></tr>
+<tr><td>EV-T1P-10</td><td>冷启动链：Startup 态经 EM HTTP(50081) 拉起模块→RPC 激活进 Ready</td><td>B：<code>sm.log_3:55905-55947</code></td></tr>
+<tr><td>EV-T1P-11</td><td><code>Auto_transToReady: false / Auto_transToManual: false</code>（不自动激活）</td><td>B：<code>qy3576_t1_v2d1_2X.yaml:163-165</code></td></tr>
+<tr><td>EV-T1P-12</td><td>mc fsm_state 6 态枚举；McCommonState 50Hz 发布</td><td>B：<code>interface/aimdk_msgs/.../common/McFsmState.msg:5-26</code>、<code>mc/bin/cfg/mc_T1.yaml:185-189</code></td></tr>
+<tr><td>EV-T1P-13</td><td>McAction 全集与 FSM×动作允许集/迁移图/runner 调度（action_state/action_ruler/action_setting）</td><td>B：<code>mc/bin/cfg/robot/qd1_t2d0/action_state.yaml:1-151</code>、<code>action_ruler.yaml</code>、<code>action_setting.yaml</code></td></tr>
+<tr><td>EV-T1P-14</td><td>起立链真机波形 110→115→101→102（躺→站）</td><td>C：<code>c2_events.log:113150-114376</code>（marker <code>c2_markers.log:4-5</code>）</td></tr>
+<tr><td>EV-T1P-15</td><td>action_info/switch_ready/McActionStatus（IDLE/RUNNING/TRANSITION）语义</td><td>B：<code>McActionInfo.idl:12-30</code>、<code>McActionStatus.idl:8-18</code></td></tr>
+<tr><td>EV-T1P-16</td><td>Agent 会话 main_state（IDLE/LISTENING/THINKING/SPEAKING）+sub_state</td><td>B：<code>AgentConversationMainState.msg:5-17</code>、<code>AgentConversationSubState.msg:5-17</code></td></tr>
+<tr><td>EV-T1P-17</td><td>TaskState 枚举 0-17（0 UNKNOWN + 17 类任务：FOLLOW=1/BUILD_MAP=6/LOCALIZATION=7/ONE_SHOT=9/GRAPH_FLOW=11/NAVIGATION=13/START_UP=14/SHUTDOWN=15/MOVE=16/GROUP_PHOTO=17）+ task_stage + token</td><td>B：<code>interface/aimdk_msgs/.../msg/TaskState.msg:8-32</code></td></tr>
+<tr><td>EV-T1P-18</td><td>算法任务态族（FollowState 0-7/NaviState 0-8/TtsStatus 0-7 等 ≥12 种）各自话题</td><td>B：<code>aimdk_msgs/msg/FollowState.msg</code>、<code>NaviState.msg</code> 等；A：§5.1 各表</td></tr>
+<tr><td>EV-T1P-19</td><td>nav2 生命周期三组受管 + <code>start_in_low_power: true</code>（低功耗=PAUSE）+ lifecycle_manager_service</td><td>B：<code>nav2_bringup/.../navigation_launch.py:45-53</code>、<code>nav2_t1_dog.yaml:412-421</code></td></tr>
+<tr><td>EV-T1P-20</td><td>sys_guard 场景体系：bootup/normal 启用、7 场景已定义未启用、cgroup 权重/配额、优先级 0-7</td><td>B：<code>sys_guard/bin/cfg/t1_soc0/scene_*.yaml</code>、<code>sys_guard_app.yaml:43-50</code></td></tr>
+<tr><td>EV-T1P-21</td><td>场景运行时序：bootup→20s 超时→normal；active_scene 广播</td><td>B：<code>sys_guard.log_61:48446-49458</code></td></tr>
+<tr><td>EV-T1P-22</td><td>健康监控 FSM 参数（t_fire 5s/t_cool 120s）与 vitals 阈值；受 SM 就绪门控</td><td>B：<code>sys_guard/bin/cfg/t1_soc0/monitor.yaml</code>、<code>sys_guard.log_61:19287</code></td></tr>
+<tr><td>EV-T1P-23</td><td><strong>定时任务触发器</strong>（T1 误名 scene_engine(rk)，模块 TaskTriggerModule）：订阅 /agent/task_operation 的 schedule_task（trigger type=time_condition）→ TimerEvent → 回调 Agent TaskStatus RPC；task_list.jsonl 为空；开箱编排实为 task_engine 内置 Orchestrator（orchestrator/*.yaml 步骤脚本）</td><td>B：<code>scene_engine/bin/cfg/scene_engine_config.yaml</code>、libtask_trigger_module.so strings、<code>task_engine/bin/cfg/orchestrator/</code>、<code>task_engine/bin/cfg/rule/t1/openbox.yaml:1-2</code></td></tr>
+<tr><td>EV-T1P-24</td><td>task_engine <code>actions_transfer.yaml</code>（324 行）与 mc <code>action_ruler.yaml</code> 双份维护 McAction 迁移图，存在不一致人肉特判（1007 vs 101）</td><td>B：<code>task_engine/bin/cfg/t1/actions_transfer.yaml:135-142,268-272</code>；<code>mc/.../action_ruler.yaml</code></td></tr>
+<tr><td>EV-T1P-25</td><td>统一响应模型 CommonState（11 值）+ reason（0-30 核心/66 扩展）+ 判定准则；McActionStatus 100=RUNNING 特例</td><td>D：<code>接口说明.md</code>「接口公共说明」；A：§5.4</td></tr>
+<tr><td>EV-T1P-26</td><td>启动阶段编排：rk 4 组（含 sm/hds 组1、业务组2 delay 5s、cloud delay 8s）、orin 2 组（导航 delay 8s）；sm restart max 5</td><td>B：<code>process_manager/bin/cfg/t1_v2d0_soc0_config.yaml:23-87,273-279</code>、<code>t1_v2d0_soc1_config.yaml:19-92</code></td></tr>
+<tr><td>EV-T1P-27</td><td>task_engine 枢纽规模（发布 13 话题/订阅 54/服务端 31 条 func_name/客户端 58 条；线程池 work 10 + worker 5）与 AmRequest/AmCancel/ControlTask 服务族；App 玩法先过 AmRequest（app_proxy B 表）</td><td>B：<code>task_engine/bin/cfg/tmp/tmp0.yaml:95-604</code>、<code>app_proxy_cfg.yaml:194-239</code>；A：§4.1、§5.2.3</td></tr>
+<tr><td>EV-T1P-28</td><td>任务规则文件：posture.yaml（pri 50、allow_held_state: false、posture_exemptions）、follow.yaml（电量 ≥6%、odom 可信）</td><td>A：§6.2.2/§6.2.3 门控要点</td></tr>
+<tr><td>EV-T1P-29</td><td>SetMcInputSource：优先级 0-100、timeout 1000ms、高优先级绝对抢占/等优先级先入为主/看门狗到期顺延、修改仅存 RAM；真机源表 rc=80/vr=70/app_proxy=90/interaction=80/pnc=80/app_proxy_t_mode=90/insta360=90（SDK 文档 app_proxy=60 已滞后）</td><td>B：<code>mc/bin/cfg/mc_T1.yaml:264-286</code>；D：接口说明.md:1004-1083</td></tr>
+<tr><td>EV-T1P-30</td><td>velocity 多源：11 个发布者汇聚、MC 按源仲裁丢弃</td><td>A：§5.1.1、§7.5 校验 2</td></tr>
+<tr><td>EV-T1P-31</td><td>ArbitrationResult 0-5（0 UNKNOWN/1 REJECTED/2 OVERRIDE/3 CANCELLED/4 SECOND_CONFIRM/5 SUCCESS）；reason 枚举 0-66 共 67 个（TASK_RUNNING=15/HELD=41/LIGHT_NESS=43/DISK_NO_SPACE=65/ODOM_STATUS_BLOCKED=66…）；独占资源互斥 + 并行白名单例外</td><td>B：<code>interface/aimdk_msgs/.../srv/AmRequest.srv:58-160</code>；A：§5.2.3</td></tr>
+<tr><td>EV-T1P-32</td><td><code>/aima/interaction/state</code>：任务态+形态+mode（0 室内/1 户外/2 超能）联合广播</td><td>A：§5.1.2</td></tr>
+<tr><td>EV-T1P-33</td><td>mc SM 心跳专用线程（mc_sm_thread 绑 CPU3 + RT 优先级）——实时域与状态管理的隔离实证</td><td>B：<code>mc_T1.yaml:48-53</code>、scene yaml 线程 RT 配置</td></tr>
+<tr><td>EV-T1P-34</td><td><code>/robot/trace/events</code> 全链路埋点通道（9 模块）——统一可观测性雏形</td><td>A：§5.1.7</td></tr>
+<tr><td>EV-T1P-35</td><td>MigrateSystemState「受理≠成功，需 GetSystemState 确认」；迁移规则在配置文件</td><td>B：<code>sm_rpc.proto:13-17</code></td></tr>
+<tr><td>EV-T1P-36</td><td>SDK 官方 McStateTransition 状态图（实线可设/虚线自动切换）</td><td>D：<code>接口说明.md:306-430</code></td></tr>
+<tr><td>EV-T1P-37</td><td>规则文件三层体系（rule/t1 23 个 + task_rules.yaml 10 + action_manager.yaml 矩阵）；优先级阶梯 shutdown=100/factory_reset·openbox=90/move=70/示教回放=60/建图定位=55/posture·follow·导航=50/运镜·全身=45/上肢=40/唤醒转向=35/交互=30/触摸=25/idle=10；任务分级 long/short/realtime_task（rc_joystick「高频实时指令，仅校验电量」）；rc_gyro blocks_direct_rpc；T1 上建图/定位/导航/开箱/闲时功能开关默认关闭</td><td>B：<code>task_engine/bin/cfg/rule/t1/*.yaml</code>、<code>task_rules.yaml</code>、<code>cfg/action_manager.yaml</code>、<code>cfg/t1/t1_cfg.yaml:14-42</code></td></tr>
+<tr><td>EV-T1P-38</td><td>两层仲裁：RuleManager::ArbitrateCheck（逐任务 arbitration_policy override/reject/parallel/interrupt）→ ActionManager::Decide（running_category × incoming_category 矩阵，含资源优先级抢占）；门控链 precondition→alarm→motion→odom→additional；别名归一；移动判定阈值 0.05m/s、acquire 300ms/release 500ms</td><td>B：task_engine 二进制符号与日志串、<code>cfg/action_manager.yaml</code>、<code>cfg/t1/t1_cfg.yaml:107-125</code></td></tr>
+<tr><td>EV-T1P-39</td><td>感知场景引擎在 orin coreon_fusion：BT 场景 tick（scene_following 100ms/scene_avoidance 50ms）；GetSceneList/GetSceneState/SceneCommand 实现类符号（CoreFusionRpc*ServiceImpl）；scene_status 0-5 + tick_count/last_tick_duration_ms；sensors.auto_inject_to_scene: true</td><td>B：<code>orin_full/robot/software/coreon_fusion/lib/libcoreon_fusion_module.so</code> strings、<code>bin/cfg/scenes/*.yaml</code></td></tr>
+<tr><td>EV-T1P-40</td><td>TaskInjection 注入门控（registered task_id → AmRequest/Touch 屏蔽，二开独占预留）；AgentFlow 图编程节点族（sound/motion/emotion/move/wait/if/repeat/break/variable + breakpoint_steps/单步调试）；运行态由 AgentFlowTaskCtrl 启停时注册、AmRequest 仅前置仲裁</td><td>B：<code>srv/TaskInjection.srv</code>、<code>srv/AgentFlowTaskCtrl.srv</code>、task_engine 二进制符号（injected_task_gate.cpp、AgentFlow 解析器键名）、<code>task_rules.yaml:288</code> 注释</td></tr>
+<tr><td>EV-T1P-41</td><td>SDK 任务调用模式：SetMcAction 受理后轮询 GetMcAction 至 TRANSITION(200)→RUNNING(100)；业务码 -1001~-1007/-10001（500ms 限频）/-10002（source 空）；首次调用可能丢包→长连接+200ms 延时；need_confirm × semantic_intent(type=confirmation yes/no) 确认闭环；AmCancel am_mode 0-4（按动作/动画/任务名/资源类型/全部）</td><td>D：<code>接口说明.md:504-589、:275-282</code>；B：<code>srv/AmCancel.srv</code>、<code>msg/TaskOperation.msg:22-38</code></td></tr>
+<tr><td>EV-T1P-60</td><td>T1 Pro 开源生态边界（2026-10-30 核实）：运行时框架 <strong>AimRT 开源</strong>（github.com/AimRT/AimRT，智元）+ 内部增强层 aimrte 闭源；<strong>task_engine 无公开仓</strong>（AgibotTech 26 仓 / Link-U-OS 16 仓均无）——闭源自研；公开近亲 <strong>aimrt_process_manager</strong>（github.com/Link-U-OS/aimrt_process_manager，灵渠OS，对应板上 em/process_manager）；板上实装开源件：ROS 2 Humble、Fast DDS 2.6.12、iceoryx 2.95.4.2、OpenCV 4.5.4/4.8、linuxptp 3.1.1、chrony 4.2、PipeWire、flutter-pi</td><td>A：§6.1.1、§6.1.4</td></tr>
+</table>
+</section>
+<section class="card" id="变更记录"><h2>变更记录</h2>
+<table>
+<tr><th>版本</th><th>日期</th><th>变更</th><th>作者</th></tr>
+<tr><td>V0.1</td><td>2026-11-10</td><td>首版</td><td>liqiliang</td></tr>
+<tr><td>V0.7</td><td>2026-11-17</td><td>结构重构：显式四部分（逻辑视图 SVG/核心业务流/关键接口/三方依赖），目录 §5.1~5.15</td><td>liqiliang</td></tr>
+<tr><td>V0.8</td><td>2026-11-17</td><td>逻辑视图标题/图形优化（标签贴箭头+细字白晕）；scene_engine 正名「定时任务触发器」（含逻辑视图入口框，标注 T1 名）</td><td>liqiliang</td></tr>
+<tr><td>V0.9</td><td>2026-11-17</td><td>scene_engine 彻底正名：正文与图表一律以「定时任务触发器」为主名，T1 原名仅存标注位与来源路径</td><td>liqiliang</td></tr>
+<tr><td>V0.10</td><td>2026-11-17</td><td>图内（SVG/mermaid）scene_engine 字样清零，T1 名仅存正文标注位</td><td>liqiliang</td></tr>
+<tr><td>V0.11</td><td>2026-11-17</td><td>scene_manager 更名 sys_guard（T1 无此名；IF-TS-10 接口改 /qdog/resource/*；概念词「资源场景」保留）</td><td>liqiliang</td></tr>
+<tr><td>V0.12</td><td>2026-11-17</td><td>逻辑视图对齐三大子系统；工作量×5 冰山系数；新增 §5.12 工作路标（4 阶段）；章节顺延至 §5.16</td><td>liqiliang</td></tr>
+<tr><td>V0.13</td><td>2026-11-17</td><td>工作量口径统一为代码量（§5.11.3/§5.11.4/§5.12 去人月）；§5.12 精简</td><td>liqiliang</td></tr>
+<tr><td>V0.14</td><td>2026-11-17</td><td>路标修正：任务运行时（最小版）调入阶段一，闭环补全为单任务端到端</td><td>liqiliang</td></tr>
+<tr><td>V0.15</td><td>2026-11-17</td><td><strong>路标依赖梳理</strong>：① 阶段二行序调换——进程守护契约移至模块生命周期管理器之前（IF-TS-09 执行端契约先行）；② 注记区补三条依赖说明（行序＝阶段内依赖序 / fsm-core 蓝本策略：本域先跑通后抽取、他域框架先行，与 DD-TS-03 不矛盾 / 跨域依赖：OM/MC/小脑）；③ 复核结论：四阶段递进无依赖倒挂（能跑→不打架→可复用可观测→达标）</td><td>liqiliang</td></tr>
+<tr><td>V0.16</td><td>2026-11-17</td><td><strong>模块正名与文件更名</strong>：① task_manager → <strong>task_engine</strong>（与 T1 Pro 同名同职责模块对标更直接）；② system_manager → <strong>state_machine</strong>（即 §5.3.2 状态机管理需求的实现模块），并在逻辑视图 SVG/组件交互图/职责矩阵/分层表中补<strong>三个子模块</strong>（SystemFSM 系统状态机、模块生命周期管理器、状态广播器——与 §5.6.1/IF-TS-05/09 分析一一对应）；③ 文件更名 task-scheduling-and-state-machine.md → task-engine-and-state-machine.md（git mv 保留历史），README 链接同步</td><td>liqiliang</td></tr>
+<tr><td>V0.17</td><td>2026-11-17</td><td><strong>逻辑视图语义修正</strong>：fsm-core（库＝开发期构件）不再作为独立框/虚线边出现在依赖图（同层并列误导可部署性、位置语义错、运行期/编译期依赖混用）——改为宿主标注（task_engine 副标题＋SystemFSM* 子框）＋图例注释＋表格注记；逻辑视图现仅含 3 个 TS 进程模块＋运行期依赖边</td><td>liqiliang</td></tr>
+<tr><td>V0.18</td><td>2026-11-17</td><td><strong>state_machine 子模块重梳理（3→4）</strong>：补<strong>审计与恢复器</strong>（迁移事件流 IF-TS-12+jsonl+快照重建 NFR-TS-03——原散落机制归位），SVG/交互图/§5.5.2 表/职责矩阵/§5.3.2 五处同步</td><td>liqiliang</td></tr>
+<tr><td>V0.19</td><td>2026-11-17</td><td><strong>新增「两层状态机」分工（§5.5.2）</strong>：任务态〔TaskState〕宿主＝task_engine·任务运行时〔对标 T1 WorkerManager〕，系统态/模块态宿主＝state_machine〔对标 aim_sm_app〕——与 T1 同构；含分工表/理由三条/T1 两进程分层状态机树（★标注状态语义层次）</td><td>liqiliang</td></tr>
+<tr><td>V0.20</td><td>2026-11-17</td><td><strong>任务运行时布局修正+子模块详表</strong>：① SVG 中任务运行时从与入口网关/规则引擎/仲裁器并列改为 <strong>task_engine 底部通栏底座</strong>（承接上层裁决、驱动执行器——与两层状态机分工呼应）；② §5.5.2 新增<strong>四模块子模块功能详表</strong>（task_engine 4/state_machine 4/sys_guard 2/OM 2 共 12 子模块，功能与 FR/IF 对应）</td><td>liqiliang</td></tr>
+<tr><td>V0.21</td><td>2026-11-18</td><td><strong>任务运行时与状态聚合拆分</strong>：二者职责不同（运行时＝纵向持有容器，对标 WorkerManager；聚合＝横向对外翻译，输入含各域状态上报而非仅运行时）——合并框会遮蔽「域执行器→聚合」依赖。SVG：运行时保持底部横跨底座，状态聚合置于两级仲裁器右侧；分层表/子模块详表（task_engine 4→5 子模块）/两层状态机分工表同步</td><td>liqiliang</td></tr>
+<tr><td>V0.22</td><td>2026-11-18</td><td><strong>状态聚合布局微调</strong>：从上层与仲裁器同排改为<strong>右侧纵向框</strong>（与两级仲裁器、任务运行时两框并列纵放，标注「域状态→TaskState 广播」）——纵向位置同时表达其与运行时（输入源）和对外广播（输出口）的相邻关系；上层流水线三段等宽重排</td><td>liqiliang</td></tr>
+<tr><td>V0.23</td><td>2026-11-18</td><td><strong>全文档按最新布局刷新</strong>：① §5.5.3 组件交互图重排（上层流水线/右侧聚合/底座运行时+边语义更新：ARB→RT「裁决落入实例」、RT→AGG「任务态」）；② 职责矩阵补 5 子模块清单；③ T1 树 WorkerManager 行补「状态聚合＝运行时对外广播口」；④ §5.6.2 状态聚合要点改为子模块化表述；⑤ §5.11.3 运行时+聚合行按两职责拆写；⑥ <strong>§5.12 路标刷新</strong>：阶段一工作项改「任务运行时（底座·最小版）+ 状态聚合」（含 IF-TS-03 广播）、里程碑补状态聚合广播、阶段二完整化拆为运行时（并行白名单/取消传播）+聚合（多域接入/历史查询）、依赖注记补底座先于聚合</td><td>liqiliang</td></tr>
+<tr><td>V0.2</td><td>2026-11-10</td><td>新增 §5.6 功能、规格与工作量分析（含功能/规格概念界定、参考开源实现对照、代码量与工作量估算）；原 §5.6–5.9 顺延为 §5.7–5.10；新增 EV-T1P-60</td><td>liqiliang</td></tr>
+<tr><td>V0.3</td><td>2026-11-11</td><td>§5.6.3 对照表：功能简称→功能名称、新增功能简介列、参考实现列两行式并附核实仓址</td><td>liqiliang</td></tr>
+<tr><td>V0.4</td><td>2026-11-11</td><td>新增 §5.6.5 端到端场景走查（UC-A）；§5.8 增设 UC-A 用例</td><td>liqiliang</td></tr>
+<tr><td>V0.5</td><td>2026-11-11</td><td>显式化调度模型：DD-TS-12 仲裁式调度（无通用任务队列）+ 排队语义受控局部清单 + §5.6.5 澄清 + OP-TS-08</td><td>liqiliang</td></tr>
+<tr><td>V0.6</td><td>2026-11-13</td><td>§5.6.2 控制权机制段补「<strong>租期＝无续约静默窗口，非任务时长</strong>」：每帧 velocity（≥10Hz）续租、可无限期持有；静默 1000ms=失联保护性释放；正常结束走显式 DELETE（与第 3 章表 3-2/3-3 注记同步）</td><td>liqiliang</td></tr>
+<tr><td>V0.7</td><td>2026-11-17</td><td>结构重构：显式四部分（逻辑视图 SVG/核心业务流/关键接口/三方依赖），目录 §5.1~5.15</td><td>liqiliang</td></tr>
+<tr><td>V0.8~V0.10</td><td>2026-11-17</td><td>定时任务触发器正名（scene_engine 全量清除）；逻辑视图标签对齐优化</td><td>liqiliang</td></tr>
+<tr><td>V0.11</td><td>2026-11-17</td><td>scene_manager → sys_guard（T1 无此名，功能在 sys_guard）</td><td>liqiliang</td></tr>
+<tr><td>V0.12</td><td>2026-11-17</td><td>逻辑视图对齐三大子系统；工作量 ×5 冰山系数；新增 §5.12 工作路标；章节顺延至 §5.16</td><td>liqiliang</td></tr>
+<tr><td>V0.13</td><td>2026-11-17</td><td>工作量口径统一为代码量（去人月）；§5.12 精简</td><td>liqiliang</td></tr>
+<tr><td>V0.14</td><td>2026-11-17</td><td>路标修正：任务运行时（最小版）调入阶段一（单任务端到端）</td><td>liqiliang</td></tr>
+<tr><td>V0.15</td><td>2026-11-17</td><td>路标依赖梳理：行序即依赖序+契约先行+fsm-core 蓝本策略注记</td><td>liqiliang</td></tr>
+<tr><td>V0.16</td><td>2026-11-17</td><td>task_engine/state_machine 正名+子模块补充；文件更名 task-engine-and-state-machine.md</td><td>liqiliang</td></tr>
+<tr><td>V0.17</td><td>2026-11-17</td><td>逻辑视图语义修正：fsm-core 库改宿主标注（不作为组件框）</td><td>liqiliang</td></tr>
+<tr><td>V0.18</td><td>2026-11-17</td><td><strong>state_machine 子模块重梳理（3→4）</strong>：发现迁移事件流（IF-TS-12）/jsonl 审计/快照重建（NFR-TS-03）三项机制原散落无子模块宿主——新增<strong>审计与恢复器</strong>子模块（SVG/组件交互图/§5.5.2 表/职责矩阵/§5.3.2 声明五处同步）；SVG 子框标签因空间精简为「模块管理器」（正文全称不变）</td><td>liqiliang</td></tr>
+<tr><td>V0.19</td><td>2026-11-17</td><td>新增「两层状态机」分工表+T1 两进程状态机树（任务态在 task_engine 对标 WorkerManager；系统态/模块态在 state_machine 对标 aim_sm_app）</td><td>liqiliang</td></tr>
+<tr><td>V0.20</td><td>2026-11-17</td><td>任务运行时改 task_engine 底座布局（SVG）；新增四模块子模块功能详表（12 子模块）</td><td>liqiliang</td></tr>
+<tr><td>V0.21</td><td>2026-11-18</td><td>任务运行时与状态聚合拆分两框（运行时底部横跨，聚合在两级仲裁器右侧）；task_engine 子模块 4→5</td><td>liqiliang</td></tr>
+<tr><td>V0.22</td><td>2026-11-18</td><td>状态聚合改右侧纵向框（与仲裁器/运行时并列纵放）</td><td>liqiliang</td></tr>
+<tr><td>V0.23</td><td>2026-11-18</td><td>全文档按最新布局刷新（组件交互图/职责矩阵/T1 树/§5.6.2/§5.11.3/§5.12 路标）</td><td>liqiliang</td></tr>
+<tr><td>V0.24</td><td>2026-11-18</td><td>图 5-1 压盖修复：① task_engine 框加高（84→96），状态聚合右移（x614→620/宽 84）与两级仲裁器（右缘 606）、运行时条（右缘 606）互不压盖；② 平台子系统框收窄（h372→300，底缘 512），OS 基础服务条下移出框（y508→526，间隙 14px）；③ 相关依赖边几何同步（运行时条下移致三条边起点/绕行边 y 更新）；④ 图例底框加高 96px 消除色块溢出；几何校验脚本全过</td><td>liqiliang</td></tr>
+<tr><td>V0.25</td><td>2026-11-18</td><td>平台框复原含 OS；定时任务触发器移出大脑（归属平台，独立入口框）</td><td>liqiliang</td></tr>
+<tr><td>V0.26</td><td>2026-11-18</td><td>补入口网关 vs 仲裁第一级切分线判据（是否依赖运行态）；T1 树 RuleManager 三职责展开</td><td>liqiliang</td></tr>
+<tr><td>V0.27</td><td>2026-11-18</td><td>定时任务触发器框迁入平台内 task_engine 右侧（独立进程语义保持）</td><td>liqiliang</td></tr>
+<tr><td>V0.28</td><td>2026-11-18</td><td>修复：定时器框在上轮替换时误插入大脑子系统 <code>&lt;g&gt;</code> 组内（渲染丢失/异常）——移至平台区正确位置（state_machine 行注释前）；渲染级校验（框内 4 文本坐标、单一定义、g 组配对 4/4、XML 有效）全过</td><td>liqiliang</td></tr>
+<tr><td>V0.29</td><td>2026-11-18</td><td><strong>图 5-1 加 TS 主体实框</strong>（(238,238)~(936,456)，深色 2.2px，标签「TS 特性域主体：task 调度框架 + 状态机管理」）：圈住 task_engine/state_machine/<strong>sys_guard</strong> 三框——含 P1 亦属本域交付；为腾位零压盖：OM 缩窄至 162、sys_guard 移回第二行右段（658~936）、<strong>定时任务触发器移至第三行右段（rm 下方，744~936×466~518，保持实框外独立进程语义）</strong>、OS 条/图例下移、平台框加高 394；全部依赖边几何同步（定时器→task_engine 改绕实框右缘外侧上行）；几何校验 11 项全过（三框含入/五向净空/平台全含）</td><td>liqiliang</td></tr>
+<tr><td>V0.30</td><td>2026-11-18</td><td><strong>图 5-1 删定时任务触发器框 + 排版整理</strong>：① 定时器框与其边删除（理由：入口实体非本域关键模块，逻辑视图聚焦交付边界——定时任务分析留 §5.4.1.1、协议留 IF-TS-01，正文开头段与分层表行同步删除）；② 版图回收紧凑——平台框 394→372、OS 条回 y508、图例回 y604 并整体重写（补「深色实框＝TS 特性域主体」图例项，蓝框说明改 3 个进程模块）；③ 几何终检全过：三框含入实框/兄弟框零压盖/OS 在平台内/图例净空 52px</td><td>liqiliang</td></tr>
+<tr><td>V0.31</td><td>2026-11-18</td><td><strong>方向 A 落实</strong>（T1 两类资源两模块实情）：resource_manager → <strong>sys_guard（系统资源守护）</strong> 全量更名并收窄（cgroup/温控/磁盘）；传感供电/导航栈 pause/模块启停<strong>归还 state_machine 差集动作</strong>；删 SM→sys_guard「状态动作」边；FR-TS-10/IF-TS-10/子模块详表/§5.11.3/路标/DD-TS-06 同步收窄</td><td>liqiliang</td></tr>
+<tr><td>V0.32</td><td>2026-11-18</td><td><strong>逻辑视图聚焦（删 3 外域框）</strong>：OM 进程守护、sys_guard、OS 基础服务条删除（外域实体非本域关键模块——分析/协议留正文 IF-TS-09/IF-TS-10/§5.10）；图 5-1 现仅含 task_engine+state_machine 两 TS 进程模块（TS 黑框收窄）；黑框整体下移 24px 避让平台标题（净空 22px）；state_machine 居中；相关 4 条边删除；平台框收高 284、图例上移、画布 700</td><td>liqiliang</td></tr>
+<tr><td>V0.33</td><td>2026-11-18</td><td><strong>图 5-1 整体重写（最优比例）</strong>：① task_engine/state_machine 两框<strong>等宽对齐</strong>（660px）且在 TS 黑框内<strong>居中</strong>，消除右侧大量留白；② 流水线三段等宽 140px＋段间小箭头（网关→规则→仲裁→聚合流向可视化）；③ 状态聚合纵框加宽 160px，标注 IF-TS-03；④ 运行时底座通栏标注补「对标 T1 WorkerManager」；⑤ state_machine 四子模块等宽 140px（副题注明子模块职责关键词）；⑥ 图例精简一行六色块；⑦ 入口框收窄，大脑域内加「其余入口见 §5.5.2 表」注记；⑧ 子系统标题精简去副题</td><td>liqiliang</td></tr>
+<tr><td>V0.34</td><td>2026-11-18</td><td><strong>图 5-1 边修正</strong>：task_engine→小脑方向反转（箭头应指小脑）；运行时→聚合箭头独立浅色+「任务态」标注</td><td>liqiliang</td></tr>
+<tr><td>V0.35</td><td>2026-11-18</td><td>图 5-1 精简：删全部 IF-TS-xx 编号（5 处边标签留纯语义文字）＋删图例「TS 域进程模块」「外域协同实体」两项</td><td>liqiliang</td></tr>
+<tr><td>V0.36</td><td>2026-11-18</td><td>图 5-1 微调：状态聚合框左缘右移（648→680，宽 160→128），运行时→聚合箭头间隙 46px，「任务态」标注放大至 10px</td><td>liqiliang</td></tr>
+<tr><td>V0.25</td><td>2026-11-18</td><td>图 5-1 归属修正：① <strong>平台子系统大框复原</strong>（h300→372 重新含 OS 基础服务条——平台承载 OS 语义回归，OS 条回框内 y508）；② <strong>定时任务触发器移出大脑框</strong>（按 16 模块清单归属软件平台，图中改画大脑/平台交界独立入口实体框〔452,98〕，大脑框缩窄 400px，边折线重排）；③ 分层表行移至平台组标注「不属大脑」；§5.5.2 开头段与组件交互图注记同步</td><td>liqiliang</td></tr>
+<tr><td>V0.26</td><td>2026-11-18</td><td><strong>补「入口网关 vs 仲裁第一级」切分线判据</strong>（是否依赖运行态）：T1 树 RuleManager 节点展开为三职责（入口杂务→入口网关 / 门控链→规则引擎 / ArbitrateCheck→仲裁第一级）；树末注记补「验票员/调度员」判据与映射差异说明；子模块详表入口网关行（补来源白名单+不依赖运行态）与两级仲裁器行（补依赖运行态+ArbitrateCheck 签名证据）对称标注</td><td>liqiliang</td></tr>
+<tr><td>V0.27</td><td>2026-11-18</td><td><strong>定时任务触发器框定位修正</strong>：不应画入 task_engine（独立进程——T1 实证独立 em 应用，IF-TS-01 为跨进程接口；入框会屏蔽进程边界与裁剪可能）；从大脑/平台交界悬空位迁至<strong>平台内 task_engine 右侧</strong>（原 fsm-core 空位，28px 间隙，标注「到期→TaskRequest 提交」）；大脑框恢复 436px；§5.5.2 开头段与分层表行同步「独立进程」表述</td><td>liqiliang</td></tr>
+<tr><td>V0.37</td><td>2026-11-18</td><td><strong>按图 5-1 定稿模块划分全文档刷新</strong>：① §5.5.2 开头段改「两核心模块＋框外画法约定」（sys_guard＝域内 P1 框外交付；OM/OS/定时任务触发器＝外域）——原「3 个进程模块入框」系 V0.32 删框前旧口径；分层表 state_machine 行删「→sys_guard 状态动作」（方向 A）、sys_guard 行改框外行（←task_engine IF-TS-10）；子模块详表表头改两视图模块+框外协同、sys_guard 块标注框外·P1；② §5.5.3 交互图：sys_guard 子图改「框外·P1／cgroup·温控·磁盘」、删 SFSM→资源执行器边（方向 A）、SFSM→SUP 边补差集动作语义、RT→SUP 边改「任务资源声明→按需激活」、RT→DOM 边补 IF-TS-14；职责矩阵 sys_guard 行同步收窄；③ §5.2 资源场景概念、§5.6.3、§5.8.1 场景库收窄为纯系统资源档位（传感供电/导航栈 pause 归 L0 差集动作；触发源删「系统状态动作」改任务声明+事件自举）；④ §5.7 新增 <strong>IF-TS-14 域执行器契约</strong>（补视图「获准任务/取消」边的接口宿主）、互校注记改「4 边+框外模块对」口径；⑤ §5.9.1 启动执行器改引 IF-TS-14、follow 场景标注改 cgroup/温控、补 front_rgbd 按需激活线；§5.9.2 删 SM→sys_guard 两处边与 SC 参与者、传感上电改经 OM 差集动作、补 sys_guard 自举注记（EV-T1P-21）；⑥ <strong>§5.12 路标刷新</strong>：SystemFSM 行改「SystemFSM＋状态广播器」、进程守护契约行含审计与恢复器最小版、模块管理器行补差集动作（方向 A 归还项）、sys_guard 行标注框外·P1、新增「图 5-1 模块对账」注记（九子模块全部落位）；⑦ §5.11.3 行 6 同步更名「SystemFSM＋状态广播器」</td><td>liqiliang</td></tr>
+<tr><td>V0.38</td><td>2026-11-19</td><td><strong>§5.5.2 模块表重写＋§5.12 路标重构</strong>：① §5.5.2「关键模块与依赖说明」表粒度改为<strong>图 5-1 每框一行</strong>（16 框行：大脑 1/小脑 2/task_engine 五框/state_machine 四框/框外 4），task_engine/state_machine 两行巨块拆散，依赖边逐框登记（含进程内流水线流向与框外协同），表头补「图中实线仅画跨子系统依赖 4 条」说明；② <strong>§5.12 阶段重排</strong>——阶段一＝<strong>task_engine 框架闭环</strong>（四主项：入口网关/规则引擎/两级仲裁器/任务运行时＋状态聚合——原阶段二仲裁器调入，运行时一步到位含并行白名单/取消传播/多域接入；SystemFSM 移阶段二、qdog_msgs 转随行基座注记）；阶段二＝<strong>state_machine 治理与跨域协同</strong>（SystemFSM＋状态广播器/控制权仲裁/进程守护契约/模块生命周期管理器）；阶段三/四刷新（fsm-core 行补「迁移阶段一二手写实现」、审计行标注完整版、用例族行补真实门控源回归）；③ 注记区重写：行序按新阶段、新增 qdog_msgs 随行交付说明与阶段一门控桩→阶段二切真实源口径、对账注记改「五框四行/四子模块全在阶段二」、里程碑改阶段一＝task_engine 单任务端到端含两级仲裁、阶段二＝UC-A 抢占全链路＋状态迁移闭环</td><td>liqiliang</td></tr>
+<tr><td>V0.39</td><td>2026-11-19</td><td><strong>§5.12 工作项粒度对齐图框＋按优先级重排</strong>：① §5.11.3 两合并行拆分（任务运行时与状态聚合→两行 15~22 K LoC/10~13 K LoC；SystemFSM＋状态广播器→两行 15~22 K LoC/5~8 K LoC，总量不变；进程守护契约行剥离审计恢复器，审计行改「审计与恢复器完整交付」含快照重建 ≤3s；P0 10→12 行、全量 13→15 行，汇总数值不变）；② §5.12 工作项改为<strong>图 5-1 每框一行</strong>——阶段一五行（入口网关/规则引擎/两级仲裁器/任务运行时/状态聚合）、阶段二五行（SystemFSM/状态广播器/控制权仲裁/进程守护契约/模块生命周期管理器）、阶段三/四刷新；③ <strong>按优先级重排</strong>——审计与恢复器（jsonl 审计+快照重建，P0 收尾）自阶段二后置阶段三工具行、dry-run 与任务/历史查询（FR-TS-11 P1 增量）自阶段一规则引擎后置阶段三收口，新增「优先级排序原则」注记（P0 主干→一二阶段；不影响基础功能打通的稳健性/平台化项→阶段三；达标验证→阶段四）；对账注记改「九框一一对应、审计与恢复器后置」；里程碑阶段三补审计回放收口</td><td>liqiliang</td></tr>
+<tr><td>V0.40</td><td>2026-11-19</td><td><strong>代码量单位统一为 K LoC</strong>（全文）：① 「N~Mk 行」→「N~M K LoC」、「约 N~M 万行」→「约 N×10~M×10 K LoC」（§5.11.2/§5.11.3/§5.11.4/§5.12 及历史版本记录共 61 处，第 6 章同步 20 处）；② §5.11.2 估算口径补单位定义（K LoC＝千行代码）；③ §5.11.4「代码量前三」按 V0.39 拆行后数值修正（模块生命周期管理器 20~30、任务运行时 15~22 K LoC）</td><td>liqiliang</td></tr>
+<tr><td>V0.41</td><td>2026-11-19</td><td><strong>接口前缀改 <code>/robot/</code> 并回靠 T1 命名（与第 3 章 V0.20 同步）</strong>：① §5.7 命名政策行改 <code>/robot</code> 前缀＋<code>robot_msgs</code> 消息包、补「服务名保留 T1 动词语义」原则；② §5.7 IF 表 14 条目 <code>/qdog/</code>→<code>/robot/</code>，其中 <strong>IF-TS-11 恢复 T1 Set 动词语义</strong>——<code>/qdog/mc/input_source</code>→<code>/robot/mc/set_input_source</code>（对标 SetMcInputSource；srv 名 <code>SetInputSource.srv</code> 本就含 Set）；IF-TS-13 消息包 qdog_msgs→robot_msgs；③ 正文引用同步（§5.5.1 状态广播器、§5.6.3 yaml 示例、§5.6.5 时序图、§5.11/§5.12 qdog_msgs 表述）；④ 版本历史与 EV 证据引用按原文不改</td><td>liqiliang</td></tr>
+<tr><td>V0.42</td><td>2026-11-19</td><td><strong>补 set_action 动作指令面（遗漏修复）</strong>：<strong>根因</strong>——设计抽象时把 mc 指令面折叠为「输入源仲裁」（IF-TS-11 仅覆盖 velocity 连续流），T1 的离散动作指令面 SetMcAction（姿态/舞蹈/表演类任务执行通道，EV-T1P-41）未条目化；图 5-1 执行器→mc 边标签「输入源/velocity」固化单通道盲区，三视图互校以视图边为基准故查不出；V0.41/第 3 章 V0.20 命名回靠只重命名既有 IF 条目，set_action 在第 3 章表 3-3/图 3-3 已存在而第 5 章无条目可同步。<strong>修复</strong>：① §5.7 新增 <strong>IF-TS-15</strong>（<code>/robot/mc/set_action</code>＋get_action 查询＋动作态上报；单一目标动作、受理≠完成、不走输入源租期），互校注记改「5 条边」；② §5.6.2 新增「mc 双指令面」关键语义（动作型任务不设独立域执行器——运行时 set_action 直驱 mc、动作态回流状态聚合；动作不经租期——互斥＝任务焦点仲裁＋mc 动作允许集）；控制权规则段与通用时序图同步；③ 图 5-1 SVG 加 task_engine→mc「set_action」边（第 5 条跨子系统依赖）；§5.5.2 模块表/子模块详表/§5.5.3 交互图/职责矩阵 mc 行改「输入源仲裁与动作执行」；④ <strong>UC-A 舞蹈链路改写</strong>——删「小脑执行器·舞蹈」与「申请 whole_body 控制权」（动作型任务语义修正）：运行时经 set_action 直驱 mc、取消走 IF-TS-15 取消语义、动作态经 mc/common/state 回流；跟随链路补 IF-TS-14 标注；⑤ §5.4.1.1 现状盘点 mc 行补 SetMcAction/GetMcAction（T1 事实）；⑥ §5.14 控制权用例族扩为「控制权与动作面」</td><td>liqiliang</td></tr>
+<tr><td>V0.43</td><td>2026-11-19</td><td><strong>图 5-1 指令下发箭头合并</strong>：删 task_engine→mc 独立 set_action 边——与「获准任务/取消」同为 task_engine→小脑侧指令下发，逻辑视图抽象层级合并为一支箭头，标注「获准任务/取消 · set_action」（保留双通道名：仅标 set_action 会误示跟随类任务下发亦走动作指令）；§5.5.2 表头/互校注记改回 4 条边＋合并说明，mc 行注记「不单独画边、并入下发箭头标注」；运行期语义不变（IF-TS-14→执行器、IF-TS-15→mc 动作面，§5.6.2/§5.7/§5.9 不受影响）</td><td>liqiliang</td></tr>
+<tr><td>V0.44</td><td>2026-11-19</td><td><strong>图内接口名修正</strong>：TaskRequest 系 srv 消息类型名（IF-TS-01 的 <code>TaskRequest.srv</code>）而非接口名——图上标签统一改真实服务路径叶名 <strong>task/request</strong>（与 set_action 同风格）：图 5-1 SVG 大脑→task_engine 边标签、§5.9.1 流程图两处边标签、§5.5.2 模块表大脑/定时任务触发器两行；正文 <code>TaskRequest{...}</code> 消息结构记法与 <code>TaskRequest.srv</code> 类型引用保留不动</td><td>liqiliang</td></tr>
+<tr><td>V0.45</td><td>2026-11-19</td><td>图内接口名改<strong>全称</strong>：task/request 叶名缩写易误读为 task 或 request——SVG 边标签（x 坐标左移适配加长）、§5.9.1 流程图两处边标签、§5.5.2 模块表两行统一改 <code>/robot/task/request</code> 全称；set_action 为单词叶名无歧义，维持不变</td><td>liqiliang</td></tr>
+</table>
+</section>
+</main>
+</div>
+<script>mermaid.initialize({startOnLoad:true, theme:"neutral", securityLevel:"loose",
+  themeVariables:{fontSize:"14px"}, sequence:{useMaxWidth:true}, flowchart:{useMaxWidth:true}});</script>
+</body>
+</html>

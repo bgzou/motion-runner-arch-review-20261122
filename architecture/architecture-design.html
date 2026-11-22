@@ -1,0 +1,2412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第 3 章 系统总体架构：三大子系统职责划分</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.3.0/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --ink: #1e293b; --muted: #64748b; --line: #e2e8f0; --accent: #2563eb;
+    --bg: #f8fafc; --card: #ffffff; --th: #eff6ff; --quote: #f0f9ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans CJK SC","PingFang SC","Microsoft YaHei",sans-serif;
+         color: var(--ink); background: var(--bg); font-size: 15px; line-height: 1.75; }
+  .wrap { display: flex; max-width: 1280px; margin: 0 auto; gap: 24px; padding: 24px; }
+  nav.toc { width: 280px; flex-shrink: 0; position: sticky; top: 24px; align-self: flex-start;
+            max-height: calc(100vh - 48px); overflow-y: auto; background: var(--card);
+            border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  nav.toc .toc-title { font-weight: 700; font-size: 13px; color: var(--muted);
+                       letter-spacing: .08em; margin-bottom: 8px; }
+  nav.toc a { display: block; padding: 5px 10px; border-radius: 8px; font-size: 13.5px;
+              color: var(--ink); text-decoration: none; border-left: 3px solid transparent; }
+  nav.toc a:hover { background: var(--th); border-left-color: var(--accent); color: var(--accent); }
+  main { flex: 1; min-width: 0; }
+  header.cover { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fff;
+                 border-radius: 14px; padding: 36px 40px; margin-bottom: 20px; }
+  header.cover .doc-no { opacity: .85; font-size: 13px; letter-spacing: .12em; }
+  header.cover h1 { margin: 8px 0 6px; font-size: 27px; }
+  header.cover .sub { opacity: .9; font-size: 13.5px; }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+                 padding: 28px 32px; margin-bottom: 20px; }
+  h2 { margin: 0 0 14px; font-size: 21px; padding-bottom: 10px; border-bottom: 2px solid var(--th); }
+  h2::before { content: ""; display: inline-block; width: 6px; height: 18px; background: var(--accent);
+               border-radius: 3px; margin-right: 10px; vertical-align: -2px; }
+  h3 { font-size: 17px; margin: 22px 0 10px; color: #0f172a; }
+  h4 { font-size: 15.5px; margin: 18px 0 8px; color: #1d4ed8; }
+  p { margin: 8px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13.5px;
+          display: block; overflow-x: auto; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--th); color: #1e3a8a; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fbfdff; }
+  code { background: #eef2f7; border-radius: 4px; padding: 1px 5px; font-size: 12.5px;
+         font-family: "JetBrains Mono",Consolas,monospace; }
+  pre.code { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 14px 16px;
+             overflow-x: auto; font-size: 12.5px; line-height: 1.6; }
+  pre.code code { background: none; color: inherit; padding: 0; }
+  blockquote { margin: 12px 0; padding: 10px 16px; background: var(--quote);
+               border-left: 4px solid var(--accent); border-radius: 0 8px 8px 0; color: #334155; }
+  blockquote strong { color: #1e40af; }
+  figure.fig { margin: 16px 0; text-align: center; }
+  figure.fig svg { max-width: 100%; height: auto; background: #fff;
+                   border: 1px solid var(--line); border-radius: 10px; }
+  figure.fig figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .diagram { margin: 14px 0; padding: 14px; background: #fff; border: 1px solid var(--line);
+             border-radius: 10px; overflow-x: auto; text-align: center; }
+  .diagram .mermaid { display: flex; justify-content: center; }
+  hr { border: none; border-top: 1px dashed var(--line); margin: 18px 0; }
+  a { color: var(--accent); }
+  @media print {
+    nav.toc { display: none; }
+    .wrap { padding: 0; }
+    section.card { border: none; break-inside: avoid-page; page-break-after: always; }
+    header.cover { border-radius: 0; }
+    body { background: #fff; }
+  }
+
+  nav.toc a.sub { padding-left: 22px; font-size: 12.8px; color: #475569; }
+  nav.toc a.sub2 { padding-left: 36px; font-size: 12.3px; color: #64748b; }
+  .tbl-wrap { overflow-x: auto; margin: 14px 0; border-radius: 10px; border: 1px solid var(--line); }
+  .tbl-wrap table { margin: 0; border: none; min-width: 100%; }
+  pre.codeblock { position: relative; background: #0f172a; color: #e2e8f0; border-radius: 10px;
+    padding: 18px 20px 16px; overflow-x: auto; font-size: 13px; line-height: 1.65;
+    font-family: "JetBrains Mono",Consolas,"Courier New",monospace; margin: 14px 0; }
+  pre.codeblock::before { content: attr(data-lang); position: absolute; top: 8px; right: 12px;
+    font-size: 11px; color: #7dd3fc; letter-spacing: .1em; text-transform: uppercase; }
+  blockquote { margin: 14px 0; padding: 12px 18px; background: var(--quote);
+    border-left: 4px solid var(--accent); border-radius: 0 10px 10px 0; color: #334155; }
+  blockquote p { margin: 4px 0; }
+  section.card table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  section.card table th { background: var(--th); font-weight: 700; white-space: nowrap; }
+  section.card table th, section.card table td { border: 1px solid var(--line);
+    padding: 8px 12px; vertical-align: top; text-align: left; }
+  section.card table tbody tr:nth-child(even) { background: #fbfdff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc"><div class="toc-title">目录 CONTENTS</div><a class="toc-item" href="#版本表">版本表</a><a class="toc-item" href="#3-1-文档定位与视图关系">3.1 文档定位与视图关系</a><a class="toc-item" href="#3-2-三大子系统总览">3.2 三大子系统总览</a><a class="toc-item sub" href="#3-2-1-大软件逻辑视图">3.2.1 大软件逻辑视图</a><a class="toc-item sub" href="#3-2-2-职责定位与一句话边界">3.2.2 职责定位与一句话边界</a><a class="toc-item sub" href="#3-2-3-业务流程主线-职责交接的唯一通道">3.2.3 业务流程主线（职责交接的唯一通道）</a><a class="toc-item sub" href="#3-2-4-职责边界判据-三问定责-负面清单">3.2.4 职责边界判据（三问定责 + 负面清单）</a><a class="toc-item" href="#3-3-大脑-Agent-子系统-认知决策域">3.3 大脑 Agent 子系统（认知决策域）</a><a class="toc-item" href="#3-4-小脑子系统-技能执行域">3.4 小脑子系统（技能执行域）</a><a class="toc-item" href="#3-5-软件平台子系统-底座治理域">3.5 软件平台子系统（底座治理域）</a><a class="toc-item" href="#3-6-场景级模块协同-接口视角-站起来-与-跟我走">3.6 场景级模块协同（接口视角）：「站起来」与「跟我走」</a><a class="toc-item sub" href="#3-6-1-模块-T1-Pro-实体映射与补充说明">3.6.1 模块 → T1 Pro 实体映射与补充说明</a><a class="toc-item sub" href="#3-6-2-场景一-站起来">3.6.2 场景一「站起来」</a><a class="toc-item sub" href="#3-6-3-场景二-跟我走">3.6.3 场景二「跟我走」</a><a class="toc-item sub" href="#3-6-4-Topic-接口列表-完备场景">3.6.4 Topic 接口列表（完备场景）</a><a class="toc-item sub" href="#3-6-5-Service-接口列表-完备场景">3.6.5 Service 接口列表（完备场景）</a><a class="toc-item" href="#3-7-业务流走查-一句-跟我走-职责衔接验证">3.7 业务流走查：一句「跟我走」（职责衔接验证）</a><a class="toc-item" href="#3-8-巴展场景业务流分析和模块间接口">3.8 巴展场景业务流分析和模块间接口</a><a class="toc-item sub" href="#3-8-1-巴展场景-A-主动迎宾-领路-站立讲解-业务流分析和模块间接口">3.8.1 巴展场景 A：主动迎宾、领路、站立讲解（业务流分析和模块间接口）</a><a class="toc-item sub2" href="#3-8-1-1-流程图">3.8.1.1 流程图</a><a class="toc-item sub2" href="#3-8-1-2-时序图">3.8.1.2 时序图</a><a class="toc-item sub2" href="#3-8-1-3-模块间的接口清单">3.8.1.3 模块间的接口清单</a><a class="toc-item sub2" href="#3-8-1-4-跨子系统边界的接口的详细数据结构">3.8.1.4 跨子系统边界的接口的详细数据结构</a><a class="toc-item" href="#3-9-特性域-子系统归属映射">3.9 特性域 → 子系统归属映射</a><a class="toc-item" href="#3-10-对标映射与差异注记">3.10 对标映射与差异注记</a><a class="toc-item sub" href="#3-10-1-模块级对标映射">3.10.1 模块级对标映射</a><a class="toc-item sub" href="#3-10-2-差异注记">3.10.2 差异注记</a><a class="toc-item" href="#3-11-开放问题">3.11 开放问题</a><a class="toc-item" href="#3-12-对标证据引用清单">3.12 对标证据引用清单</a></nav>
+<main>
+<header class="cover">
+  <div class="doc-no">QDOG-SFS-001《四足狗软件特性设计说明书》· 第 3 章</div>
+  <h1>系统总体架构：三大子系统职责划分</h1>
+  <div class="sub">章节版本 V0.40 草案 · 2026-11-20 · 职责视图（大脑 Agent／小脑／软件平台） · 巴展场景 A 定稿（§3.8）</div>
+</header>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>项</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>所属文档</td>
+<td>QDOG-SFS-001《四足狗软件特性设计说明书》（见 <a href="./README.md">README</a>）</td>
+</tr>
+<tr>
+<td>章节版本</td>
+<td>V0.40（草案，2026-11-20；§3.8.1.4 补 AmCancel（task/cancel）完整结构——五粒度取消、预留条目〔场景 A 未触发〕，证据档〔合理推断〕）</td>
+</tr>
+<tr>
+<td>视图定位</td>
+<td>职责视图（三大子系统横向切分）；部署视图概要见 README §3.2，细化归各特性域章节 X.5.6</td>
+</tr>
+<tr>
+<td>证据基线</td>
+<td>启元 T1 Pro 固件 t2-3 / JetPack 540.4.0（EV 条目来源见 §3.12 与主控文档 §5）</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="版本表">版本表</h2>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>日期</th>
+<th>变更摘要</th>
+<th>作者</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V0.1</td>
+<td>2026-11-12</td>
+<td>首版：三大子系统职责边界、模块功能描述、业务流走查、特性域映射、对标映射与证据清单（新增 EV-T1P-62~66）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.2</td>
+<td>2026-11-12</td>
+<td>新增<strong>第 3A 章并行原稿</strong>：2026-11-12 对话产出「三大子系统职责与模块功能描述」<strong>原封不动收录</strong>（仅加章头说明，正文未按本文档模板改写），待与第 3 章正文整合；第 3 章正文未做任何改动</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.3</td>
+<td>2026-11-12</td>
+<td><strong>整合 3A 入正文并删除 3A 章</strong>：① 视觉归属裁决——交互视觉（认人/手势/姿态）归大脑·视觉识别、感知视觉（跟随检测/避障/语义分割）随小脑/平台（平台 SP 通用感知服务供给、小脑消费），OP-ARCH-05 标记已裁决；② 职责视角互补——§3.2.1 融入「WHAT/WHY–HOW–底座」层定位与一句话边界、业务主链路，与 §3.2.2 五交接物/§3.2.3 三问定责互补；③ §3.3~3.5 模块表新增「T1 模块对照」列；§3.2.2 图 3-1、§3.6 走查、§3.7/§3.8.1 映射同步修正；注记 4 补 T1 部署实证</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.4</td>
+<td>2026-11-12</td>
+<td><strong>感知服务归属调整（暂定）：平台 → 小脑</strong>。全章修订：§3.2.1 职责表、图 3-1（感知服务节点移入小脑域）、§3.3/§3.5 相关表述、§3.4 新增「感知服务」模块行、§3.6 走查、§3.7 映射、§3.8.1 对标行、OP-ARCH-05 追加修订记录。平台不再提供感知服务，仅提供传感器数据预处理（数据就绪）；感知服务（目标/点云/代价图/感知场景）为小脑模块，部署仍在感知算力板</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.5</td>
+<td>2026-11-12</td>
+<td>新增 <strong>§3.2.1 大软件逻辑视图</strong>（图 3-1：三大子系统 × 16 模块权威清单与主数据流；原 §3.2.1~3.2.3 顺延为 §3.2.2~3.2.4、原图 3-1 改号图 3-2）；模块命名对齐权威清单——小脑感知拆分为「融合与感知」+「实时避障」两模块行（§3.2.2/§3.4/图 3-2/§3.6/§3.8.1/OP-ARCH-05 同步），平台「基础 OS」更名「OS 基础服务」（§3.2.2/图 3-2/§3.5）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.6</td>
+<td>2026-11-12</td>
+<td>新增 <strong>§3.6 场景级模块协同（接口视角）</strong>：表 3-1 模块→T1 实体映射（含两场景参与度，无需新增同级模块）；「站起来」「跟我走」各一组流程图+时序图（图 3-3~3-6，最小实体=16 模块，每条边标注接口名/Topic 或 Service/关键参数，全部沿用 T1 Pro 实测）；表 3-2 Topic 接口列表（27 项，含频次实证）、表 3-3 Service 接口列表（26 项，含全参入出）；原 §3.6~3.10 顺延为 §3.7~3.11</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.7</td>
+<td>2026-11-12</td>
+<td>§3.6 四图补充<strong>灯带控制逻辑</strong>（按实证口径区分两种方式）：lumina 常驻订阅联动（tts_status/interaction/state → 灯语，EV-T1P-64）加入图 3-3~3-6；显式 LedStripCommand 标注「仅 UC1 跳舞实证，本场景可选」（图 3-3）；修正图 3-6 PlayTts 路由（原误画至 APP，改为 TE→语音模块→PipeWire 播放）；两场景各增灯带要点</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.8</td>
+<td>2026-11-13</td>
+<td><strong>「融合与感知+实时避障」同进程决策落档</strong>（2026-11-13）：§3.4 两模块行加实现注记 + 新增边界注记块（数据关系：避障只消费融合输出；分层关系：反射层 vs 导航规划级；实现形态：融合引擎与避障同进程，对标 coreon_fusion 一进程一份点云，检测/里程计可独立进程）；§3.9.2 新增注记 5（T1 避障非独立模块的实证与不平级判定 + 本产品拆逻辑模块的三理由）；§3.6.3 要点补逻辑模块/部署形态区分</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.9</td>
+<td>2026-11-13</td>
+<td><strong>模块更名：「融合与感知」→「感知与融合」</strong>（语序按流程主链修正）：主链为「单源感知 → 多源融合」（检测/分割先行、目标/点云融合在后，EV-T1P-54/49）；数据级融合在前为特例（多 ToF 点云先合再统一避障判定、EKF 状态估计）——两类并存，模块名以能力主词「感知」在前。全章 24 处有效表述更名（图 3-1/3-2/3-5/3-6 节点、§3.2.2/§3.3/§3.4/§3.6.1/§3.7/§3.9.1/§3.9.2/OP-ARCH-05）；历史版本记录保留旧名</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.10</td>
+<td>2026-11-13</td>
+<td><strong>模块定名「融合感知」（行业通用叫法，最终名）</strong>：复合词不表达先后顺序，规避语序歧义；与 T1 生态外部表述一致（「七路融合感知：双目 RGB + 5 路 ToF + 6 轴 IMU」，C：c4 §7）。全章有效表述再次更名；§3.4 边界注记 0 改写（命名沿革：融合与感知〔V0.8 前〕→ 感知与融合〔V0.9〕→ 融合感知〔V0.10 定名〕）；历史版本记录保留各自时点名</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.11</td>
+<td>2026-11-13</td>
+<td>表 3-1 最前新增「<strong>子系统</strong>」列（大脑/小脑/软件平台），模块归属一目了然；行序按子系统分组（大脑 5 → 小脑 5 → 软件平台 6）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.12</td>
+<td>2026-11-13</td>
+<td>表 3-1「子系统」列<strong>合并重复单元格</strong>：因 GFM 表格不支持 rowspan，该表转为内嵌 HTML 表格实现（大脑 rowspan=5 / 小脑 rowspan=5 / 软件平台 rowspan=6），GitHub/VS Code 均可正常渲染</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.13</td>
+<td>2026-11-13</td>
+<td>图 3-3/3-4 四项排查修正：① 灯带归属——HALB 节点去掉灯带、删除显式 LedStripCommand 可选边（T1 由 hal_sensor 进程承接系实现事实，本产品灯效归本体 APP，表 3-1 加注差异）；② 传感器数据预处理在本场景<strong>有用</strong>——补 joint/state、imu/torso/state（1kHz/500Hz，EV-T1P-52）供 mc 的边（bms/state 电量门控原已画）；③④ 两条 tts_status 边标注为「同一话题的两个订阅者」（TE=任务收尾闭环、lumina=只读订阅灯语联动，多播语义）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.14</td>
+<td>2026-11-13</td>
+<td>表 3-2 <strong>补录 /odom/status</strong>（里程计可信度状态码：UInt8 自评、task_engine 唯一消费者、关联 AmRequest reason=66 与 require_trusted 门控、「质量随流→任务门控」模式实例〔EV-T1P-28/31/37/51〕）；图 3-5 对应边标签同步补用途说明</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.15</td>
+<td>2026-11-13</td>
+<td>图 3-5/3-6 避障 velocity 边与边界注记 2 补「<strong>实时避障不参与控制权抢占</strong>」标注：不调 SetMcInputSource、不注册源（T1 mc 注册源表 7 源无 coreon_fusion，EV-T1P-29），只对当前持权源指令做安全叠写；极端停车走急停链；避障改写 velocity 的 source 名细节标注「推断」</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.16</td>
+<td>2026-11-13</td>
+<td><strong>修正 SetMcAction 接口标签</strong>（图 3-3/3-4）：请求只带<strong>单一目标动作</strong>（action=101 四足站立）——115 预备→102 行走系 MC 内部状态机自动迁移（action_ruler mid-action，实测链 115→101→102，EV-T1P-14），原标签误将内部链写成接口参数；表 3-3 McAction 枚举改为分段写法并明示 101 四足站立 vs 201 双足站立（本产品纯四足 A-2，无 201 链路）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.17</td>
+<td>2026-11-13</td>
+<td>表 3-2 velocity 行与表 3-3 SetMcInputSource 行补「<strong>timeout=1000ms 是看门狗续租窗口，非任务时长</strong>」注记：每帧 velocity（≥10Hz）即续租、持续发布可无限期持有（跟随/遥控均此模式）；连续静默 1000ms=持权方失联的保护性释放并按优先级顺延；正常结束走显式 DELETE；第 5 章控制权机制段同步</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.18</td>
+<td>2026-11-13</td>
+<td><strong>文件更名</strong>：subsystem-responsibilities.md → <code>architecture-design.md</code>（架构设计文档；git mv 保留文件历史）；章节内容与编号不变</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.19</td>
+<td>2026-11-19</td>
+<td><strong>接口命名产品化（消除 T1 Pro 前缀痕迹）</strong>：表 3-2/3-3 与图 3-3~3-6 全部接口名统一 <code>/qdog/</code> 前缀——消除 <code>/aima/</code>、<code>/aimdk_msgs/</code>、<code>/ofilm/</code> 及 T1 裸根命名空间（<code>/perception/</code>、<code>/percep/</code>、<code>/interaction/</code>、<code>/sys_guard/</code>、<code>/navi/</code>、<code>/odom</code>、<code>/tf</code>）；与第 5/6 章 IF 条目一致处对齐条目名并标注编号（IF-TS-01/02/05/06/10/11、IF-SP-01~03/05/07~11），未条目化者为本章暂定名（正式定名归各特性域章节）；两表新增「T1 对标名」列保留实证溯源，★ 随之移至该列（= T1 SDK 官方面）；§3.6 引言、表标题、图边标签、注意事项跨表引用与 §3.4 相关表述同步改写；§3.11 证据条目按原文引用不改</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.20</td>
+<td>2026-11-19</td>
+<td><strong>接口前缀改 <code>/robot/</code> 并向 T1 命名回靠</strong>：① <code>/qdog/</code> 前缀全文改为 <code>/robot/</code>（原 <code>robot/permission_state</code> 因与前缀撞名去段为 <code>/robot/permission_state</code>）；② 服务名恢复 T1 动词语义与词汇（仅去掉与路径段重复的域词 Mc/Hal）——SetMcAction→<code>/robot/mc/set_action</code>、SetMcInputSource→<code>set_input_source</code>、GetCurrentInputSource→<code>get_current_input_source</code>、SetMcMotion→<code>set_motion</code>、SetMcPresetMotion→<code>set_preset_motion</code>、SetAvoidance→<code>set_avoidance</code>、SetNaviTask→<code>navi/set_task</code>、SetFollowTaskBiped→<code>follow/set_follow_task_biped</code>、set_follow_perception_task→<code>perception/set_follow_perception_task</code>、SetHalCameraStream/SetHalTofStream→<code>sensor/set_camera_stream</code>·<code>set_tof_stream</code>、PlayAudioFile→<code>play_audio_file</code>、音量/静音四口 get_/set_ 展开、FollowTaskCtrl→<code>follow/task_ctrl</code>、ShutdownTask→<code>shutdown_task</code>、CaptureJpegImage→<code>capture_jpeg_image</code>；③ 话题名恢复 T1 路径分段——<code>mc/common/state</code>、<code>mc/locomotion/velocity</code>、<code>target_info</code>；④ 图 3-3~3-6 边标签同步；与第 5/6 章现存 <code>/qdog/</code> 命名的前缀与部分条目名差异<strong>待同步</strong>（名字一致者标 IF-xx、仅语义对应者改标「对标 IF-xx」）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.21</td>
+<td>2026-11-19</td>
+<td><strong>第 5/6 章同步落定后的标注复核</strong>：第 5 章 V0.41/第 6 章 V0.7 已统一 <code>/robot/</code> 前缀并回靠 T1 命名（IF-TS-11=<code>/robot/mc/set_input_source</code>、IF-SP-05=<code>set_camera_stream</code>/<code>set_tof_stream</code> 双服务、IF-SP-08 <code>targets</code>→<code>target_info</code>、消息包 qdog_msgs→robot_msgs）——本章相应把 set_input_source、set_camera_stream/set_tof_stream 两处「对标 IF-xx」改回同名标注「IF-xx」，引言与两表标题移除「第 5/6 章待同步」注记；set_follow_perception_task（对标 IF-SP-10——第 6 章为场景三件套的一般化）与 task/cancel（对标 IF-TS-02 取消子面）维持语义对标标注</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.22</td>
+<td>2026-11-19</td>
+<td><strong>新增 §3.8 巴展场景业务流分析和模块间接口（首节 §3.8.1 场景 A：主动迎宾、领路、站立讲解）</strong>：表 3-4 场景实体→权威模块映射（信标锁定/讲解模块/领路/运镜为场景级新增能力，OP-ARCH-07 立项）；图 3-7 关键路径流程图＋图 3-8 完整业务时序图（实体限场景模块清单：大脑 7/小脑 5/平台 5，实线边均标注表 3-2/3-3 既有接口与关键入出参，<strong>不新增接口</strong>，虚线=进程内步骤）；表 3-5 场景接口清单（25 项全部溯源自两表）；要点八条（触发双路径〔EV-T1P-67〕、领路新增技能与第 5 章合并边口径、导航内置避障不依赖安全模块、变形前 obstacle_check 净空门、仲裁结果回大脑+interaction/state 状态可见、灯带两方式、讲解三路输出、运镜 servo）；<strong>记录机型假设冲突</strong>：README §3「纯四足、不做双足变形」vs 场景双足站立/双足↔四足变形（OP-ARCH-07）；原 §3.8~3.11 顺延为 §3.9~3.12（正文交叉引用 8 处同步＋第 6 章归属声明 1 处，历史版本记录保留旧编号）；新增 EV-T1P-67</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.23</td>
+<td>2026-11-19</td>
+<td><strong>巴展场景机型裁决落档</strong>：产品确认支持<strong>双足站立＋四足↔双足变形</strong>（2026-11-19）——OP-ARCH-07② 标记已裁决（原文划线保留）、§3.8.1 前置条件「机型注意（冲突）」改「机型口径（已确认）」、要点④ 同步；README §3 对标对象段落与 A-2 假设同日修订（文档 V0.65）、第 5 章 §5.6.1 状态集引言同步（V0.46）；上肢/手部能力（场景 A 讲解手势依赖）仍待产品定义（A-2 附注、OP-ARCH-07①）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.24</td>
+<td>2026-11-19</td>
+<td><strong>双臂能力裁决落档</strong>：四足→双足变形时<strong>前两腿转为双臂、后两腿站立承重</strong>（2026-11-19 产品定义确认）——OP-ARCH-07① 上肢附注移除、② 裁决内容补双臂（双臂即讲解手势执行机构）；§3.8.1 前置条件机型口径补双臂、要点⑦ 手势注双臂来源；README A-2 同日修订（文档 V0.66）；场景 A 图 3-7/3-8 无需改动（<code>set_preset_motion</code> 左手/右手位掩码、T1 优先级阶梯「上肢动作=40」〔EV-T1P-37〕与本口径自洽）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.25</td>
+<td>2026-11-19</td>
+<td><strong>§3.8.1 场景 A 两图按评审口径重构（图 3-7/3-8）</strong>：① 流程图三子系统标题加粗＋放大（style 18px）；② 语音模块去 TTS（仅唤醒+ASR）——删 play_tts×2、TTS 音频、VOICE→APP tts_status 边；③ 播报改 <strong>TE→讲解模块 <code>audio/play_audio_file</code></strong>（<code>file.file_name</code>＝音频 ID——AudioFile 字段实证 D《接口说明》AudioFile.msg；对标 T1 PlayAudioFile ★＋固定话术本地直答〔EV-T1P-62〕），讲解模块括号改「预置固定话术与讲解语音」；④ 长程任务规划更名<strong>任务规划</strong>（括号「迎宾→领路→讲解→返回，<strong>规划产任务序列、逐段下发</strong>」）；⑤ 意图识别括号「本地 NLU / 云端 LLM」，唤醒后<strong>意图识别触发信标锁定</strong>（新增 INT→BEACON 进程内边）；⑥ <strong>运镜退出场景 A</strong>（删 GIM 节点与 servo/set 边，表 3-4 注「不参与，预留后续场景」）；⑦ <code>tts_status</code> 边改<strong>讲解模块→本体 APP</strong>；⑧ 本体 APP 括号补<strong>音量控制</strong>＋新增 TE→APP <code>audio/set_volume</code> 边（四口合一行为组）；⑨ <code>task/request</code> <strong>仲裁响应显式回边</strong>（TE→大脑，两图核对补齐）；⑩ <strong>A4 三步显式化</strong>（变形四足→TE 直调 <code>navi/set_task</code> 返程〔不经领路〕→变形双足；删 A0 待机模块与回环边）；⑪ 场景描述 A4/前置条件/表 3-4 五行/表 3-5 四行/要点②⑤⑦⑧同步（清单仍 25 项：−play_tts−servo/set＋play_audio_file＋set_volume）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.26</td>
+<td>2026-11-19</td>
+<td><strong>§3.8.1 接口清单拆分重构（参考表 3-2/3-3 体例）</strong>：原单表 25 项拆为<strong>表 3-5 Topic 使用清单（13 项）＋表 3-6 Service 使用清单（12 项）</strong>；列结构改为「接口｜使用阶段｜场景用途｜入参｜出参」——入参与出参各自成列，<strong>入参逐参数给出含义与场景取值</strong>（Topic 沿表 3-2「同负载多播」口径、出参列标注场景订阅方与判定用途；Service 出参亦逐参数释义）；参数语义与枚举值沿用 T1 Pro 实测口径（来源两表＋D《接口说明》AudioFile.msg）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.27</td>
+<td>2026-11-19</td>
+<td><strong>§3.8.1 两图三项修订</strong>：① 流程图子系统标题修复——去 <code>**</code>（裸 Markdown 加粗在 mermaid 标签中显形为星号、且放大字号致标签框截断），改为纯文本＋<code>style … font-weight:bold</code>（SVG 样式继承标题）；② 两图接口名<strong>全称化</strong>——每条边/消息的接口名均带 <code>/robot/</code> 前缀（含合并边「获准任务 · /robot/mc/set_action」与注记内引用），图题与清单引言同步去「省略前缀」表述；③ <strong>新增调用阶段标签</strong>——mermaid 技术上一边多标签（管道分隔）兼容性不稳（部分渲染器解析失败整图不渲染），采用「【调用阶段】＋接口」前缀式单标签（如【A0 语音唤醒】【A2 变形】【A4 步骤二】），两图每条边/消息均标注，图题注明标签体例</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.28</td>
+<td>2026-11-19</td>
+<td><strong>§3.8.1 A4 阶段标签更名</strong>：「A4 步骤一/步骤一前置」→「A4 变形/A4 变形前」、「A4 步骤二」→「A4 导航返程」、「A4 步骤三/步骤三前置」→「A4 变形/A4 变形前」（两图标签与消息尾部冗余描述清理）；流程图 navi 边标签「A4 返程」同步改「A4 导航返程」；表 3-6 set_action/navi/set_task 行与要点② 表述同步（「三步之一与三」→「去程变形/返程变形」）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.29</td>
+<td>2026-11-19</td>
+<td><strong>§3.8.1 表 3-5/3-6 入参分行</strong>：两清单入参单元格由「一行挤排、<code>；</code> 分隔」改为<strong>逐参数一行</strong>（GFM 表格内 <code>&lt;br&gt;</code> 换行，GitHub/VS Code 均正常渲染）——每行＝<code>参数名</code>（含义＋场景取值）；follow_candidates 成员字段、set_follow_task_biped 字段子集随之逐项展开为独立行；列表头「逐参数含义」改「逐参数一行」；内容零增删（仅排版）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.30</td>
+<td>2026-11-20</td>
+<td><strong>新增 §3.8.2 跨子系统接口数据结构（场景 A）</strong>：本章图 3-7/3-8 跨子系统边界的 14 项接口（大脑↔平台 5：task/request、interaction/state、play_audio_file、tts_status、camera；平台↔小脑 9：set_action、set_preset_motion、navi/set_task、follow/task_ctrl、set_follow_task_biped、mc/common/state、follow/state、navi/state、tof），大脑↔小脑无直连（§3.2.2 边界）；数据结构参考 T1 SDK msg/srv（<code>docs/primebot/sdk_t1-v1.0.0.0/接口说明.md</code>），两档证据标注——〔SDK 原文〕逐字段转录（仅包名 aimdk_msgs→robot_msgs 替换；SetMcAction 链含 RequestHeader/ResponseHeader/CommonState/CommonTaskResponse/TokenCommon/McActionCommand/McAction 枚举〔变形 10/11/20/21、双足站立 201 等场景核心取值有官方定义〕、SetMcPresetMotion 链含 McControlArea/McPresetMotion 枚举、PlayAudioFile＋AudioFile）、〔依 A 拟定〕SDK 官方面未含者按 A §5.1/§5.2 拟定且类型标注建议值（AmRequest/FollowTaskCtrl/SetFollowTaskBiped/SetNaviTask/InteractionState/TtsStatus/McCommonState/FollowState/NaviState）；标准 ROS 类型（Image/PointCloud2）注明无自定义结构；子系统内部接口不列入（见表 3-5/3-6）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.31</td>
+<td>2026-11-20</td>
+<td><strong>§3.8 小节重划（内容仅移动未改）</strong>：按交付物四分——§3.8.1 场景 A-流程图（场景描述＋前置条件＋图 3-7）、§3.8.2 场景 A-时序图（图 3-8＋要点与边界注记八条，自清单后移至时序图后）、§3.8.3 场景 A-模块间的接口清单（表 3-5/3-6）、§3.8.4 详细数据接口（跨子系统边界的接口，原 §3.8.2 改号）；原 §3.8.1 总标题「巴展场景 A：主动迎宾、领路、站立讲解」并入场景描述行</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.32</td>
+<td>2026-11-20</td>
+<td>§3.8 两处小修：① §3.8.4 标题改「<strong>跨子系统边界的接口的详细数据结构</strong>」；② §3.8.3 表 3-5/3-6 <strong>首列对跨子系统边界接口加粗</strong>（14 项＝§3.8.4 覆盖集：大脑↔平台 5＋平台↔小脑 9；子系统内部 11 项维持常规字体），清单引言加图例说明，tof 行内部星号 <code>\*</code> 转义防加粗标记截断</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.33</td>
+<td>2026-11-20</td>
+<td><strong>§3.8 层级重划＋证据档加粗标注</strong>：① 场景 A 升为父节 §3.8.1「巴展场景 A：主动迎宾、领路、站立讲解（业务流分析和模块间接口）」（场景描述＋前置条件置于此），四交付物降为 <strong>§3.8.1.1 流程图／§3.8.1.2 时序图／§3.8.1.3 模块间的接口清单／§3.8.1.4 详细数据接口（跨子系统边界的接口）</strong>——为后续场景 B/C 预留 §3.8.2+ 编号；② §3.8.1.3 两表 25 行首列尾标<strong>〔T1 参考〕</strong>（19）/<strong>〔T1 参考＋推断〕</strong>（6——semantic_intent type 扩展、tts_status 发布方、task/request 任务面、set_follow_task_biped 字段名、set_action 领路同面、play_audio_file 承接方）；③ §3.8.1.4 的 15 个代码块前各加粗档位标签（〔T1 参考〕SDK 原文转录 ×6＋camera/tof 注记 ×2；〔合理推断〕依 A 拟定 ×9——含字段建议值声明），引言两档定义同步加粗</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.34</td>
+<td>2026-11-20</td>
+<td>§3.8 两处小修：① 证据标签更名——<strong>〔T1 参考〕→〔参考 T1〕</strong>、〔T1 参考＋推断〕→〔参考 T1＋推断〕（§3.8 范围 36 处：清单 25 行＋两处图例＋数据结构 15 块标签与引言；历史版本记录保留旧表述）；② §3.8.1.4 标题改「<strong>跨子系统边界的接口的详细数据结构</strong>」</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.35</td>
+<td>2026-11-20</td>
+<td><strong>§3.8 两处可视性优化</strong>：① 表 3-4 第一列「平台」改「<strong>软件平台</strong>」并<strong>rowspan 合并单元格</strong>（GFM 不支持 rowspan，转内嵌 HTML 表格——同表 3-1 V0.12 做法；大脑 7/小脑 5/软件平台 5，单元格内 Markdown 转义为 b/code 标签）；② §3.8.1.3 两表跨子系统接口行在加粗基础上<strong>再加 ★ 星标</strong>（14 行，星标置于接口名前），图例同步并注明 ★ 为本清单局部图例（与表 3-2/3-3「T1 对标名」列 ★＝SDK 官方面含义不同）</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.36</td>
+<td>2026-11-20</td>
+<td><strong>§3.8.1.4 补 PoseStamped 数据结构说明</strong>（NaviTask 块后新增）：<code>geometry_msgs/PoseStamped</code> 系<strong>标准 ROS 类型</strong>（ROS 官方定义——非 T1 自定义、非合理推断；T1 SetNaviTask 实测即用此类型传 goal〔A §5.2〕，本产品沿用），标注〔参考 T1〕（标准 ROS 类型）档；字段展开 header/pose（Point position＋Quaternion orientation——orientation 即 navi/set_task 终点朝向「到达即正对观众」的载体）；navi/set_task 与 navi/state 的 goal 同此结构</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.37</td>
+<td>2026-11-20</td>
+<td><strong>§3.8.1.3 星标行渲染修复</strong>：「加粗＋★」双标记在部分渲染器下 <code>★**接口名**</code> 相邻导致加粗失效、<code>**</code> 显形——14 个星标行<strong>去掉接口名加粗</strong>（★ 单独承担跨子系统标记），证据档标签 <code>**〔参考 T1（＋推断）〕**</code> 的加粗保留（单独成段渲染正常）；图例同步改「首列 ★ 星标＝跨子系统边界接口」并记录缘由</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.38</td>
+<td>2026-11-20</td>
+<td><strong>§3.8.1.3 跨子系统标记改圆标</strong>：★ 星标与表 3-2/3-3「T1 对标名」列 ★（＝T1 SDK 官方面）含义冲突，14 行改 <strong>◎ 圆标</strong>——◎ 亦避开表 3-1 参与度列的 ●/○ 占用，全文档无二义；图例改写并记录选型缘由</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.39</td>
+<td>2026-11-20</td>
+<td><strong>token 语义澄清（评审问答复盘）</strong>：task/request 出参 <code>token</code> 曾注「获准任务凭据」语义模糊、有改 task_id 之议——经查 T1 与第 5 章口径，<strong>token 与 task_id 系分层两概念不宜合并命名</strong>（token＝仲裁层归属权凭据，AmCancel/ControlTask/FollowTaskCtrl 携带防越权〔A §5.2〕；task_id＝执行层任务实例标识，CommonTaskResponse 返回、get_action 轮询与 mc/common/state 的 task_info 对齐；第 5 章图 5-1 并列两者）——<strong>命名沿用 T1 不改</strong>，改为补注释：表 3-6 task/request/follow/task_ctrl 两行、§3.8.1.4 TaskRequest 块注释＋新增「token 与 task_id 的分层区别」引注块</td>
+<td>liqiliang</td>
+</tr>
+<tr>
+<td>V0.40</td>
+<td>2026-11-20</td>
+<td><strong>§3.8.1.4 补 TaskCancel（AmCancel）完整数据结构</strong>（评审问答复盘）：token 定位「谁的任务」＋<code>am_mode</code>（五粒度：0 按动作 id/1 动画 id/2 任务名/3 资源类型/4 全部）＋<code>cancel_target_id</code> 定位「取消哪一个」；标注<strong>〔合理推断〕</strong>（SDK 官方面无此接口，字段依 A §5.2、类型建议值）；<strong>预留条目</strong>——场景 A 未触发取消流，A 组改「5 项＋预留 1 项」（共 14＋1），场景 B/C 直接沿用；附任务/动作取消粒度引注（am_mode 0/2 两档＝运控层/仲裁层）</td>
+<td>liqiliang</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-1-文档定位与视图关系">3.1 文档定位与视图关系</h2>
+<p>本章是说明书的<strong>职责视图</strong>：把本产品软件横向切分为三大子系统，回答「每块谁负责什么、边界在哪、在业务流程中如何交接」。它与既有章节的关系：</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>视图/章节</th>
+<th>回答的问题</th>
+<th>与本章关系</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>README §3.2（部署概要）</td>
+<td>软件落在哪块板</td>
+<td>本章给出职责域，板位映射见 §3.10 注记</td>
+</tr>
+<tr>
+<td>README §4（特性域总览）</td>
+<td>纵向按特性域深挖设计</td>
+<td>本章 §3.9 给出特性域 → 子系统归属映射</td>
+</tr>
+<tr>
+<td>第 5/6 章（TS/SP 特性域）</td>
+<td>单个特性域的完整设计</td>
+<td>本章只界定职责边界，设计细节以特性域章节为准</td>
+</tr>
+</tbody>
+</table></div>
+<p>本章<strong>不引入</strong>新的 FR/NFR/IF 条目；涉及的设计取舍以「注记 + 开放问题（OP-ARCH-xx）」形式记录，归口到对应特性域章节展开。</p>
+<hr />
+<h2 id="3-2-三大子系统总览">3.2 三大子系统总览</h2>
+<h3 id="3-2-1-大软件逻辑视图">3.2.1 大软件逻辑视图</h3>
+<p>本节给出本产品的<strong>大软件逻辑视图</strong>：三大子系统及其 <strong>16 个模块</strong>的构成与主数据流。此为本产品模块划分的<strong>权威清单</strong>，§3.3~§3.5 模块职责表与后续设计章节均以此为纲。</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    EXT(["用户 / App / 云 / 遥控器 / SDK"])
+    subgraph BRAIN["大脑 Agent 子系统（认知决策域）"]
+        direction LR
+        VOICE["语音唤醒和语音识别"]
+        VIS["视觉识别（交互视觉）"]
+        INT["意图识别"]
+        PLAN["长程任务规划"]
+        MEM["记忆"]
+    end
+    subgraph CERB["小脑子系统（技能执行域）"]
+        direction LR
+        MCM["运控"]
+        NAV["导航"]
+        FOL["跟随"]
+        FUS["融合感知"]
+        AVO["实时避障"]
+    end
+    subgraph PLAT["软件平台子系统（底座治理域）"]
+        direction LR
+        TSCH["task 调度框架与状态管理"]
+        SENS["传感器数据预处理"]
+        INFR["推理框架"]
+        APPM["本体 APP（含交互服务）"]
+        SAFE["安全模块"]
+        OSS["OS 基础服务"]
+    end
+    BODY(["本体：关节 / 传感 / 屏 / 灯 / 音"])
+
+    EXT --&gt;|"语音输入"| VOICE
+    VOICE &amp; VIS --&gt;|"识别文本 / 视觉上下文"| INT
+    INT --&gt; PLAN
+    INT &amp; PLAN -.-&gt;|"上下文 / 断点读写"| MEM
+    PLAN --&gt;|"① 任务意图"| TSCH
+    EXT &lt;--&gt;|"玩法指令 / 状态镜像"| APPM
+    APPM --&gt;|"归一转发"| TSCH
+    TSCH --&gt;|"③ 获准任务"| CERB
+    SENS --&gt;|"算法就绪输入"| FUS
+    SENS --&gt;|"算法就绪输入"| VIS
+    FUS --&gt;|"目标 / 点云 / 代价图"| NAV &amp; FOL
+    FUS --&gt; AVO
+    NAV &amp; FOL --&gt;|"速度（经控制权仲裁）"| MCM
+    AVO --&gt;|"避障改写"| MCM
+    MCM --&gt; BODY
+    CERB --&gt;|"④ 执行状态"| TSCH
+    TSCH --&gt;|"⑤ 全局状态 / 结果"| APPM
+    OSS &amp; INFR -.-&gt;|"承载 / 算力（横向）"| BRAIN &amp; CERB
+    SAFE -.-&gt;|"门控 / 急停 / 降级（全程）"| TSCH &amp; CERB
+</div></div>
+<p>图 3-1 大软件逻辑视图：三大子系统 × 16 模块与主数据流（①~⑤ 交接物定义见 §3.2.3；模块职责详表见 §3.3~§3.5；感知归属按 OP-ARCH-05 修订：融合感知/实时避障归小脑〔暂定〕，数据由平台预处理就绪供给）。</p>
+<h3 id="3-2-2-职责定位与一句话边界">3.2.2 职责定位与一句话边界</h3>
+<p><strong>业务主链路</strong>：用户说话/动作 → <strong>大脑</strong>（听懂、认出、想清楚要做什么）→ <strong>平台</strong>（仲裁：现在能不能做、先做哪件，并备好数据与算力）→ <strong>小脑</strong>（怎么做：实时闭环把任务变成身体运动）→ 本体动作；全程由<strong>平台</strong>提供数据、算力、表现、安全与运行环境。本表为「层视角」（切清职责<strong>性质</strong>），与 §3.2.1 逻辑视图（模块构成）、§3.2.3「流视角」（交接物①~⑤）、§3.2.4「判据视角」（三问定责+负面清单）互补。</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>子系统</th>
+<th>域性</th>
+<th>职责定位（层视角）</th>
+<th>一句话职责</th>
+<th>一句话边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>大脑 Agent 子系统</strong></td>
+<td>认知决策域</td>
+<td>认知与决策层（<strong>WHAT/WHY</strong>）：理解「做什么、为什么」</td>
+<td><strong>听懂、看懂、想清楚</strong>：把多模态输入理解成结构化意图，规划成任务序列，沉淀记忆</td>
+<td>只产生「要做什么」，不仲裁、不执行、不碰关节</td>
+</tr>
+<tr>
+<td><strong>小脑子系统</strong></td>
+<td>技能执行域</td>
+<td>运动与行为执行层（<strong>HOW</strong>）：决定「怎么动」</td>
+<td><strong>把任务做成运动</strong>：运控/导航/跟随三类运动技能独占式消费本体运动资源，实时决定「怎么动」并上报执行状态；<strong>融合感知、实时避障（暂定归此）</strong>产出目标/点云/代价图等结果级感知并实时改写避障，供三类技能与任务层消费</td>
+<td>只管「怎么动」（含感知供给），实时域闭环，不关心用户是谁、说了什么</td>
+</tr>
+<tr>
+<td><strong>软件平台子系统</strong></td>
+<td>底座治理域</td>
+<td>横向底座（<strong>让上两层能跑</strong>）：承载与治理</td>
+<td><strong>承载与治理</strong>：任务调度与状态管理（谁获准做）、传感器数据预处理（数据就绪供给，<strong>不含感知服务</strong>）、推理框架（跑模型）、本体 APP 与交互服务（对外呈现）、安全模块（兜底）、OS 基础服务（运行环境）；是另两个子系统的宿主、仲裁者与监护人</td>
+<td>不含业务智能、不含运动算法、不含感知服务；对上两层提供「有序、就绪、可用、安全、可运维」</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3-2-3-业务流程主线-职责交接的唯一通道">3.2.3 业务流程主线（职责交接的唯一通道）</h3>
+<div class="diagram"><div class="mermaid">flowchart LR
+    U(["用户/环境"])
+    EXT(["App / 云 / 遥控器 / SDK"])
+    BODY(["本体：关节/灯/屏/音"])
+
+    subgraph BRAIN["大脑 Agent 子系统（认知决策域）"]
+        VOICE["语音唤醒与识别"]
+        VIS["交互视觉（认人/手势/姿态）"]
+        INT["意图识别"]
+        PLAN["长程任务规划"]
+        MEM["记忆"]
+    end
+    subgraph PLAT["软件平台子系统（底座治理域）"]
+        TSCH["task 调度框架与状态管理"]
+        SENS["传感器数据预处理"]
+        INFR["推理框架"]
+        APPM["本体 APP（含交互服务）"]
+        SAFE["安全模块"]
+        OS["OS 基础服务"]
+    end
+    subgraph CERB["小脑子系统（技能执行域）"]
+        MCM["运控"]
+        NAV["导航"]
+        FOL["跟随"]
+        PER["融合感知 · 实时避障（暂定归此）&lt;br/&gt;目标/点云/代价图/感知场景/避障改写"]
+    end
+
+    U --&gt;|"声音"| VOICE
+    U --&gt;|"可见光/深度/点云原始流"| SENS
+    SENS --&gt;|"算法就绪输入（校正/滤波/去地面）"| VIS
+    SENS --&gt;|"算法就绪输入（预处理）"| PER
+    PER --&gt;|"目标/点云/代价图（感知视觉）"| NAV &amp; FOL
+    PER --&gt;|"避障/目标状态"| TSCH
+    VOICE --&gt;|"识别文本"| INT
+    VIS --&gt;|"感知上下文"| INT
+    INT --&gt;|"结构化意图"| PLAN
+    MEM &lt;--&gt;|"上下文/偏好/断点"| INT &amp; PLAN
+    PLAN --&gt;|"① 任务意图（类型+参数）"| TSCH
+    EXT --&gt;|"② 指令/玩法请求"| APPM
+    APPM --&gt;|"归一转发"| TSCH
+    TSCH --&gt;|"③ 获准任务指令（source/token/优先级）"| MCM &amp; NAV &amp; FOL
+    NAV &amp; FOL --&gt;|"速度指令（经控制权仲裁）"| MCM
+    MCM --&gt; BODY
+    APPM --&gt;|"状态镜像/交互呈现"| EXT
+    MCM &amp; NAV &amp; FOL --&gt;|"④ 执行状态（域状态机）"| TSCH
+    TSCH --&gt;|"⑤ 全局状态/任务结果"| APPM &amp; INT
+    SAFE -.-&gt;|"门控/急停/降级（全程横向）"| TSCH
+    SAFE -.-&gt; MCM
+    OS &amp; INFR -.-&gt;|"承载：进程/通信/时统/算力"| BRAIN
+    OS &amp; INFR -.-&gt; CERB
+</div></div>
+<p>图 3-2 三大子系统职责交接图。①~⑤ 为五个交接物（见 §3.7 走查）。</p>
+<h3 id="3-2-4-职责边界判据-三问定责-负面清单">3.2.4 职责边界判据（三问定责 + 负面清单）</h3>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>判责问题</th>
+<th>归属</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>决定「做什么」？（理解/意图/规划/记忆）</td>
+<td>大脑</td>
+</tr>
+<tr>
+<td>决定「谁获准做、整机处于什么态、安不安全」？</td>
+<td>平台</td>
+</tr>
+<tr>
+<td>决定「怎么动」？（步态/路径/跟随控制律）</td>
+<td>小脑</td>
+</tr>
+<tr>
+<td>提供运行环境与公共服务（OS/推理/预处理/对外 APP）？</td>
+<td>平台</td>
+</tr>
+</tbody>
+</table></div>
+<p>负面清单（各自<strong>不得</strong>越界的事项）：</p>
+<ul>
+<li>大脑：不得直接发布运动/任务执行指令——其输出是意图与计划，必须经平台获准（对标 T1 Pro 语义意图仅广播给 task_engine、由 AmRequest 统一受理，[EV-T1P-27][EV-T1P-63]）。</li>
+<li>小脑：不得做任务级共存裁决（导航与跟随同抢本体时由平台仲裁；两者速度输出汇入运控输入源仲裁）；不得直接对 App/云（执行状态一律经平台聚合上报）。</li>
+<li>平台：不含业务智能——不做意图理解、不产生运动策略；安全模块只做门控/监控/降级兜底，不替代各域能力。</li>
+</ul>
+<hr />
+<h2 id="3-3-大脑-Agent-子系统-认知决策域">3.3 大脑 Agent 子系统（认知决策域）</h2>
+<p><strong>职责</strong>：消费平台预处理后的传感数据流，完成「交互感知理解（听清+认出）→ 意图 → 规划 → 记忆」的认知闭环；输出物是<strong>结构化任务意图与任务计划</strong>（交接物①），交付平台调度。语音链路的音频前端（唤醒检测/AEC/降噪/VAD）就近内嵌于本子系统，不经平台通用预处理（对标 T1 Pro：音频前端在 Agent 侧，[EV-T1P-53]）。本子系统的视觉仅为<strong>交互视觉</strong>（服务对话与个性化）；<strong>感知视觉</strong>（跟随检测/避障/语义分割）归属<strong>小脑（融合感知/实时避障，暂定）</strong>（OP-ARCH-05 修订，见 §3.11）。</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能描述</th>
+<th>T1 模块对照</th>
+<th>对标锚点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>语音唤醒与识别</strong></td>
+<td>常驻低功耗唤醒词监听（KWS）；唤醒后运行音频前端（AEC/降噪/VAD/波束）并做流式 ASR，输出识别文本（中间结果+终稿+置信度）。识别采用「本地快速 + 云端精准」两级仲裁，云端超时或离线时本地接管</td>
+<td>Agent 语音前端：讯飞 VTN 唤醒 + silero VAD + DTLN AEC；云端 ASR + 本地兜底；播放面 audio_manager</td>
+<td>[EV-T1P-53][EV-T1P-62]</td>
+</tr>
+<tr>
+<td><strong>视觉识别（交互视觉）</strong></td>
+<td>消费算法就绪输入（校正图像），完成<strong>交互视觉</strong>理解：人脸检测与成员识别（认出「这是谁」）、手势/人体姿态理解（看懂用户当前状态）、表情与场景要素（如亮度），服务于对话与个性化。<strong>不含</strong>跟随目标检测、避障与语义分割——彼为感知视觉，归属小脑（融合感知/实时避障，暂定）</td>
+<td>rk 板 Agent 侧 NPU 六模型：face_detect / face_encode / gesture_cls / hand_detector / pose / reid（RKNN 就地推理）</td>
+<td>[EV-T1P-61]；T1 布局见 §3.10.1</td>
+</tr>
+<tr>
+<td><strong>意图识别</strong></td>
+<td>把 ASR 文本 + 视觉上下文 + 平台反馈的系统状态，映射为结构化意图（意图类型+参数+置信度）；本地规则式 NLU 兜底、云端 LLM 优先仲裁；支持二次确认类语义（确认/取消）</td>
+<td>Agent 本地 NLU（nlu_rules.json 关键词意图 + fuzzy_match 模糊匹配）+ 云端 LLM FuncCall → semantic_intent；online_priority 2s 超时</td>
+<td>[EV-T1P-62][EV-T1P-63][EV-T1P-41]</td>
+</tr>
+<tr>
+<td><strong>长程任务规划</strong></td>
+<td>把意图展开为可执行的任务序列/场景流程：步骤编排、前置条件、失败恢复、断点续跑；支持可视化编排（图编程）与定时/事件触发式自主任务</td>
+<td>LLM→semantic_intent 单意图；AgentFlow 图编程（DAG）；scene_engine 定时触发（TimerEvent）；task_engine Orchestrator 场景 DSL（state_file 断点续跑）</td>
+<td>[EV-T1P-23][EV-T1P-65][EV-T1P-40]</td>
+</tr>
+<tr>
+<td><strong>记忆</strong></td>
+<td>分层记忆管理：会话记忆（多轮上下文）、任务记忆（断点/进度）、长期记忆（用户偏好/地图/习惯档案），提供统一存取与检索</td>
+<td>biological_entry 声纹/人脸录入、face_id 成员识别与问候、任务历史（GetTaskInfo 消费上次结果）；端侧长期记忆弱——<strong>对标缺口</strong>，见 §3.10 注记 2</td>
+<td>[EV-T1P-65][EV-T1P-16]</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-4-小脑子系统-技能执行域">3.4 小脑子系统（技能执行域）</h2>
+<p><strong>职责</strong>：把平台获准下发的任务指令（交接物③）实时转化为本体运动行为；运控/导航/跟随三类技能<strong>独占式</strong>消费本体运动资源，内部经控制权仲裁收敛为单一指令流；持续上报各自域状态机（交接物④）。<strong>融合感知、实时避障（暂定归此子系统）</strong>：前者消费平台预处理产出的算法就绪输入，输出结果级感知（目标/点云/代价图/感知场景/EKF 里程计）；后者消费融合输出实时判定并改写避障——感知视觉由此承载，大脑不重复建设感知链路（OP-ARCH-05 修订，见 §3.11）。</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能描述</th>
+<th>T1 模块对照</th>
+<th>对标锚点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>运控</strong></td>
+<td>步态生成与平衡控制、动作库执行（起卧/表演/姿势）、躯干姿态调节；维护动作状态机（迁移/就绪判定）与多源输入仲裁（速度/步态/姿态指令按「优先级+租期+看门狗」抢占）</td>
+<td>mc_app_main（rk·CPU3 独占，36 线程）+ device_manager（关节 1kHz CAN）；action_ruler 动作迁移图；SetMcInputSource 输入源仲裁；check_fall / security_guard 守护</td>
+<td>[EV-T1P-12][EV-T1P-13][EV-T1P-15][EV-T1P-29][EV-T1P-30][EV-T1P-52]</td>
+</tr>
+<tr>
+<td><strong>导航</strong></td>
+<td>建图（SLAM）、定位（含腿式里程计融合）、全局/局部路径规划、避障速度输出、异常恢复行为；按系统状态需求低功耗启停（暂停/恢复生命周期）；消费本子系统融合感知输出的语义代价图（感知视觉）</td>
+<td>nav2 全栈（orin：bt_navigator/planner/controller/behavior/costmap×2、map_server）+ percep 语义代价图 + pointcloud_combiner；legged_odom（rk，EKF）</td>
+<td>[EV-T1P-19][EV-T1P-18][EV-T1P-51]</td>
+</tr>
+<tr>
+<td><strong>跟随</strong></td>
+<td>跟随目标检测锁定与重捕获（ReID/深度 ROI——检测为本子系统融合感知形态）、距离方位控制律输出速度指令、与避障输出融合；维护跟随状态机（含丢失/重捕/结束迁移）</td>
+<td>person_track（yolov8+CLIP-ReID）→ follow_node 语义跟随规划 → velocity(source=follow)；coreon_fusion 避障改写</td>
+<td>[EV-T1P-18][EV-T1P-54][EV-T1P-39][EV-T1P-28]</td>
+</tr>
+<tr>
+<td><strong>融合感知（暂定归此）</strong></td>
+<td>消费平台预处理的算法就绪输入（校正图像/组织点云/odom），输出结果级感知：多源融合点云、目标服务（检测+跟踪+ReID）、语义理解（室内外/楼梯/可通行性/语义代价图）、感知场景编排（能力组合启停）；含本体融合 EKF 里程计供给；<strong>V1 融合引擎与实时避障同进程实现</strong>（见下边界注记）</td>
+<td>orin 感知簇：coreon_fusion（多源融合+BT 场景）、person_track（检测/ReID）、percep（语义/代价图）、nav2_perception（点云合并滤波）；legged_odom（rk，EKF）</td>
+<td>[EV-T1P-42~45][EV-T1P-49][EV-T1P-50][EV-T1P-51][EV-T1P-54][EV-T1P-39]</td>
+</tr>
+<tr>
+<td><strong>实时避障（暂定归此）</strong></td>
+<td>消费融合感知输出，实时判定与执行避障：定向障碍查询（/robot/perception/obstacle_check，IF-SP-07）、避障状态广播、速度指令避障改写与限速、局部绕障栅格；输出与导航/跟随速度叠加后进运控；<strong>V1 与融合引擎同进程实现</strong>（见下边界注记）</td>
+<td>coreon_fusion 避障链（ObstacleCheck/SetAvoidance/velocity 改写/局部绕障栅格 0.025m）+ nav2 局部避障联动</td>
+<td>[EV-T1P-43][EV-T1P-44][EV-T1P-45]</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>「融合感知 / 实时避障」边界注记（2026-11-13 决策）</strong>：</p>
+<ol start="0">
+<li><strong>命名与流程顺序</strong>：模块名采用行业通用叫法「<strong>融合感知</strong>」（多传感器融合感知；T1 生态外部表述亦为「七路融合感知」，C：c4 §7）——复合词不表达先后顺序，规避语序歧义（命名沿革：融合与感知〔V0.8 前〕→ 感知与融合〔V0.9〕→ <strong>融合感知〔V0.10 定名〕</strong>）。模块内流程两种顺序并存：主链「<strong>单源感知 → 多源融合</strong>」（检测/分割先行、目标/点云级融合在后：person_track 检测 → coreon_fusion 目标融合；percep 分割 → fused_obstacle_cloud 供融合消费，EV-T1P-54/49）；数据级融合在前属特例（多 ToF 点云先合成统一障碍云再判定、EKF 先融合 IMU+关节再输出位姿，EV-T1P-42/51）。</li>
+<li><strong>数据关系</strong>：实时避障<strong>只消费</strong>融合感知的输出（点云/目标），不自建感知链——避免本说明书多处批评过的「视觉链路重复建设」（T1 实证教训，§3.10.1）；</li>
+<li><strong>分层关系</strong>：与导航的避障分层——实时避障＝传感器级<strong>反射层</strong>（50ms tick 类、速度改写/限速，对标 coreon_fusion 避障链），导航＝<strong>规划级</strong>（代价图/绕行重规划，对标 nav2 costmap/behavior）；<strong>实时避障不参与输入源（控制权）抢占</strong>——它不调 /robot/mc/set_input_source（IF-TS-11）抢占、不注册源（T1 mc 注册源表 7 源无 coreon_fusion，EV-T1P-29），只对当前持权源的指令做安全叠写；极端停车走急停链（SystemFSM→E_STOP）而非抢源（避障改写后 velocity 的 source 名发布细节未实证，推断为复用被改写源语义）；</li>
+<li><strong>实现形态（已决策）</strong>：逻辑模块 ≠ 进程——<strong>「融合感知（融合引擎部分）+ 实时避障」同进程实现</strong>，对标 coreon_fusion「一个进程一份点云」的工程形态，避免 50ms 环上跨进程传点云；检测（person_track 类）与里程计（legged_odom 类）子组件可独立进程（T1 亦如此）。</li>
+</ol>
+<hr />
+<h2 id="3-5-软件平台子系统-底座治理域">3.5 软件平台子系统（底座治理域）</h2>
+<p><strong>职责</strong>：全系统的宿主与治理者。横向三条线：<strong>治理线</strong>（任务调度/状态/安全——决定「谁获准做」并兜底）、<strong>服务线</strong>（传感器预处理/推理框架/本体 APP——提供公共能力与对外呈现）、<strong>环境线</strong>（OS 基础服务——进程/通信/时统/资源）。不含任何业务智能。</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能描述</th>
+<th>T1 模块对照</th>
+<th>对标锚点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>task 调度框架与状态管理</strong></td>
+<td>统一任务受理（语音/App/遥控器/SDK/自主触发归一为同一请求协议）；前置门控（电量/姿态/odom 可信/系统态）；两级仲裁（任务级共存策略 + 动作级矩阵）；任务生命周期管理与全局状态聚合广播；系统状态机（整机生命周期/功能组激活集）</td>
+<td>task_engine（AmRequest 两级仲裁 + rule/*.yaml 23 规则）+ aim_sm_app（9 态状态机 + 模块心跳）+ sys_guard（场景化 cgroup/健康监控）</td>
+<td>[EV-T1P-27][EV-T1P-31][EV-T1P-37][EV-T1P-38][EV-T1P-32][EV-T1P-01][EV-T1P-05]</td>
+</tr>
+<tr>
+<td><strong>传感器数据预处理</strong></td>
+<td>传感原始数据 → 算法就绪输入的全链公共加工：采集侧（相机/ToF/IMU/关节驱动、曝光控制、硬件同步）、几何预处理（去畸变/立体校正/多源拼接/TF 变换）、点云滤波（去噪/去地面/下采样/合并）、标定管理、传感器新鲜度路由。<strong>不含感知服务</strong>（结果级感知归小脑，暂定）——本模块止步于「数据就绪」</td>
+<td>hal_camera / hal_rgbd / hal_sensor / device_manager（1kHz 关节/500Hz IMU）+ iceoryx/dmabuf 零拷贝 + 标定/同步/质量设施</td>
+<td>[EV-T1P-48][EV-T1P-49][EV-T1P-50][EV-T1P-56][EV-T1P-58]；收敛决策见第 6 章</td>
+</tr>
+<tr>
+<td><strong>推理框架</strong></td>
+<td>模型全生命周期管理（加载/版本/热更新）、多后端推理引擎（NPU/GPU/CPU：RKNN/TensorRT/ONNX Runtime/MNN）、推理服务化（同步/异步、多路复用）、算力资源调度</td>
+<td>rk：onnxruntime（RL/VAD）+ RKNN（交互视觉 NPU）+ MNN（AEC）+ sherpa-onnx（KWS）；orin：TensorRT 10.7（24 个 engine）</td>
+<td>[EV-T1P-61][EV-T1P-49]</td>
+</tr>
+<tr>
+<td><strong>本体 APP（含交互服务）</strong></td>
+<td>设备侧应用服务：对 App/云/遥控器的接入（连接/鉴权/指令归一转发）、全局状态镜像上报、交互呈现统一播控（表情/灯效/音效/TTS 两级播报）、场景化玩法服务（拍照/看相机等）</td>
+<td>display_ui（flutter-pi 胸屏）/ lumina 灯效 / audio_manager / picture_service·resource_manager〔sys_guard 前身〕 / rc·quanji·insta360 配件 / app_proxy·housekeeper</td>
+<td>[EV-T1P-64][EV-T1P-62][EV-T1P-27]</td>
+</tr>
+<tr>
+<td><strong>安全模块</strong></td>
+<td>全局安全治理：安全状态（急停/保护姿态）、准入安全门控（低电/倾角/odom 可信/障碍）、运行安全监控（跌倒/碰撞/温升/磁盘）、降级与恢复策略、数据与权限合规</td>
+<td>SM EStop 态 + TriggerEStop；permission_state 停流门控；REASON_LOW_BATTERY 族拦截；held_state 拒绝；动作白/黑名单；extreme_action 30 天/终生配额</td>
+<td>[EV-T1P-06][EV-T1P-28][EV-T1P-37][EV-T1P-44][EV-T1P-20][EV-T1P-22]；收敛决策见注记 3</td>
+</tr>
+<tr>
+<td><strong>OS 基础服务</strong></td>
+<td>双板 OS/BSP 与驱动栈、中间件基座（ROS 2 DDS + 板内零拷贝 IPC）、时间同步（PTP/chrony）、进程编排与守护（分组启动/心跳/回滚）、资源治理（cgroup/优先级/隔离核）、文件系统与 OTA 基座、数据记录与日志</td>
+<td>Ubuntu 22.04 + em 体系（process_manager 分组拉起 30+ 应用）+ FastDDS + iceoryx + AimRT + linuxptp/chrony + ota_master/slave + abox/cloud_proxy/hds/drp</td>
+<td>[EV-T1P-26][EV-T1P-57][EV-T1P-60][EV-T1P-66][EV-T1P-20]</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-6-场景级模块协同-接口视角-站起来-与-跟我走">3.6 场景级模块协同（接口视角）：「站起来」与「跟我走」</h2>
+<p>本节以「站起来」「跟我走」两个场景为分析对象，把 §3.2.1 权威清单的 16 模块映射到 T1 Pro 运行实体，输出模块级流程图/时序图（每条边标注：接口名、Topic/Service、关键参数）与完备场景所需的 Topic/Service 接口列表。<strong>接口命名采用本产品命名（统一 <code>/robot/</code> 前缀，无 T1 Pro 命名空间痕迹），并尽量保持与 T1 实测命名的类似性</strong>：服务名保留 T1 动词语义与词汇（Set/Get/Play/Load/Capture 等，如 SetMcAction→<code>/robot/mc/set_action</code>、SetMcInputSource→<code>/robot/mc/set_input_source</code>，仅去掉与路径段重复的域词 Mc/Hal）；话题名保留 T1 路径叶名与分段（仅替换 T1 专有命名空间段 aima/hal/sm/algo/coreon_fusion/percep/ofilm/sys_guard，如 <code>/aima/mc/common/state</code>→<code>/robot/mc/common/state</code>）。与第 5/6 章 IF 条目的对应关系以编号标注（第 5/6 章已同步 <code>/robot/</code> 前缀并回靠 T1 命名；名字一致者标 IF-xx、仅语义对应者标「对标 IF-xx」），未条目化者为本章<strong>暂定名</strong>（正式定名归各特性域章节）；<strong>参数、语义与频次沿用 T1 Pro 实测口径</strong>（来源：A §5.1/§5.2 接口全表、§6.2 UC2/UC3 实测链路、B 配置实证、D SDK 官方面 ★），实测原名见两表「T1 对标名」列——对本产品而言这是<strong>对标基线</strong>。</p>
+<h3 id="3-6-1-模块-T1-Pro-实体映射与补充说明">3.6.1 模块 → T1 Pro 实体映射与补充说明</h3>
+<p>表 3-1 权威模块与 T1 Pro 实体映射（子系统列已合并；含两场景参与度）</p>
+<div class="tbl-wrap"><table>
+  <thead>
+    <tr><th>子系统</th><th>权威模块（§3.2.1）</th><th>T1 Pro 对应实体</th><th>站起来</th><th>跟我走</th></tr>
+  </thead>
+  <tbody>
+    <tr><td rowspan="5">大脑</td><td>语音唤醒和语音识别</td><td>aimrt_agent（讯飞 VTN 唤醒 + silero VAD/DTLN 前端 + ASR；TTS 合成与 PlayTts 服务亦在此）</td><td>●</td><td>●</td></tr>
+    <tr><td>视觉识别</td><td>aimrt_agent NPU 六模型（face/gesture/hand/pose/reid）</td><td>○</td><td>○（上下文/锁定辅助）</td></tr>
+    <tr><td>意图识别</td><td>Agent 本地 NLU（nlu_rules）+ 云端 LLM → semantic_intent</td><td>●</td><td>●</td></tr>
+    <tr><td>长程任务规划</td><td>LLM FuncCall / AgentFlow / task_engine Orchestrator</td><td>—（单步任务）</td><td>—</td></tr>
+    <tr><td>记忆</td><td>biological_entry / face_id 档案</td><td>—</td><td>—</td></tr>
+    <tr><td rowspan="5">小脑</td><td>运控</td><td>mc（/mc_ros2_node，rk·CPU3）+ device_manager（14 关节 CAN，1kHz）</td><td>●</td><td>●</td></tr>
+    <tr><td>导航</td><td>nav2 栈</td><td>—</td><td>—（接口列表收录）</td></tr>
+    <tr><td>跟随</td><td>follow_node</td><td>—</td><td>●</td></tr>
+    <tr><td>融合感知</td><td>person_track（检测+ReID）+ legged_odom（EKF）+ coreon_fusion（多源融合）+ percep</td><td>—</td><td>●</td></tr>
+    <tr><td>实时避障</td><td>coreon_fusion 避障链（ObstacleCheck/velocity 改写/绕障栅格）</td><td>—</td><td>●</td></tr>
+    <tr><td rowspan="6">软件平台</td><td>task 调度框架与状态管理</td><td>task_engine（AmRequest 仲裁）+ sm（system_state 门控）+ sys_guard</td><td>●</td><td>●</td></tr>
+    <tr><td>传感器数据预处理</td><td>hal_camera（双目）/ hal_rgbd（ToF）/ hal_sensor（BMS/触摸）〔注：T1 的灯带控制也在 hal_sensor 进程；本产品灯效业务归本体 APP〕/ device_manager（关节/IMU）</td><td>●（BMS/关节/IMU）</td><td>●（图像/ToF/odom 源）</td></tr>
+    <tr><td>推理框架</td><td>onnxruntime（mc RL）/ TensorRT（person_track）/ RKNN</td><td>○承载</td><td>○承载</td></tr>
+    <tr><td>本体 APP（含交互服务）</td><td>audio_manager（播放）/ display_ui（表情）/ lumina（灯语）/ app_proxy（状态镜像）</td><td>●</td><td>●</td></tr>
+    <tr><td>安全模块</td><td>permission_state 门控 / mc security_guard / 急停链</td><td>○门控</td><td>○门控</td></tr>
+    <tr><td>OS 基础服务</td><td>process_manager / iceoryx / FastDDS / PipeWire / 系统时钟</td><td>○承载</td><td>○承载</td></tr>
+  </tbody>
+</table></div>
+<p><strong>补充模块说明（要求 1）</strong>：两场景无需新增同级模块即可表述完备——BMS/灯带/触摸数据与控制在 T1 中均由 hal_sensor 承载（归「传感器数据预处理」）；TTS 合成在 Agent（归「语音唤醒和语音识别」）、播放经 audio_manager（归「本体 APP」，PipeWire TCP 6001/4713 非 ROS 直连）；「推理框架」「安全模块」「OS 基础服务」为承载/门控层，图中以注记或虚线示意，不作为业务通信实体。●=主参与，○=辅助/承载，—=不参与。</p>
+<h3 id="3-6-2-场景一-站起来">3.6.2 场景一「站起来」</h3>
+<p>图 3-3 场景一流程图（T1 Pro 实测同构：UC2「躺→四足站立」，起立链 115→101→102；接口名为产品命名 <code>/robot/</code> 前缀，图内省略前缀）</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    U(["用户：语音「站起来」"])
+    subgraph BRAIN["大脑 Agent 子系统"]
+        VOICE["语音唤醒和语音识别〔aimrt_agent：唤醒+ASR+TTS〕"]
+        INT["意图识别〔本地 NLU/云端 LLM〕"]
+    end
+    subgraph PLAT["软件平台子系统"]
+        TE["task 调度框架〔task_engine：AmRequest 仲裁+posture 规则〕"]
+        SM["状态管理〔sm〕"]
+        HALB["传感器数据预处理〔hal_sensor：BMS；device_manager：关节/IMU〕"]
+        APP["本体 APP〔display_ui 表情/lumina 灯语/audio 播放〕"]
+    end
+    subgraph CERB["小脑子系统"]
+        MC["运控〔mc：姿态 FSM+RL；device_manager CAN 下发〕"]
+    end
+
+    U --&gt;|"音频输入"| VOICE
+    VOICE --&gt;|"agent/asr_result（Topic：text / is_final=true / confidence）"| INT
+    INT --&gt;|"agent/semantic_intent（Topic：type=action，value=站起）"| TE
+    SM --&gt;|"system/state（Topic：cur_state=Ready/Business 门控）"| TE
+    HALB --&gt;|"sensor/bms/state（Topic：remaining_capacity_percentage 电量门控）"| TE
+    HALB --&gt;|"sensor/joint/state、sensor/imu/torso（Topic：1kHz/500Hz，iceoryx 板内）〔EV-T1P-52〕"| MC
+    TE --&gt;|"mc/set_action（Service：action.value=101 四足站立〔TE 仅下发单一目标动作；115 预备→102 行走系 MC 内部状态机自动迁移，实测链 115→101→102，EV-T1P-14〕，source=task_engine）"| MC
+    MC --&gt;|"mc/common/state（Topic：action_info.status/posture，50Hz）"| TE
+    TE --&gt;|"audio/play_tts（Service：文本/优先级/trace_id）"| VOICE
+    VOICE --&gt;|"TTS 音频（非 ROS：PipeWire TCP 6001/4713）"| APP
+    TE --&gt;|"display/play_emotion（Service：emotion_ids/priority）"| APP
+    TE --&gt;|"interaction/state（Topic：task_state/形态 → lumina 任务态灯语联动）"| APP
+    VOICE --&gt;|"interaction/tts_status（Topic：trace_id/状态=完成）→ 任务收尾闭环〔订阅者之一〕"| TE
+    VOICE --&gt;|"interaction/tts_status（Topic）→ lumina 只读订阅，播报灯语联动〔EV-T1P-64；同一话题的另一订阅者〕"| APP
+</div></div>
+<p>图 3-4 场景一时序图（步骤 7 起立时长为 T1 实测 ~5s）</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant VOICE as 语音唤醒和语音识别〔Agent〕
+    participant INT as 意图识别〔NLU/LLM〕
+    participant TE as task 调度框架〔task_engine〕
+    participant SM as 状态管理〔sm〕
+    participant HAL as 传感器数据预处理〔hal_sensor〕
+    participant MC as 运控〔mc·CPU3〕
+    participant APP as 本体 APP〔audio/display/lumina〕
+
+    U-&gt;&gt;VOICE: 语音「站起来」
+    VOICE-&gt;&gt;INT: agent/asr_result（Topic：text，is_final=true）
+    Note over INT: 云端 LLM 优先，2s 超时本地 NLU 接管〔EV-T1P-62〕
+    INT-&gt;&gt;TE: agent/semantic_intent（Topic：type=action，value=站起）
+    SM--&gt;&gt;TE: system/state（Topic：Ready/Business 就绪门控）
+    HAL--&gt;&gt;TE: sensor/bms/state（Topic：电量前置检查）
+    Note over TE: 进程内：AmRequest 仲裁 + rule posture.yaml&lt;br/&gt;（allow_held_state=false；posture_exemptions）〔EV-T1P-28/38〕
+    TE-&gt;&gt;MC: mc/set_action（Service：action=101 四足站立〔单一目标动作〕）
+    MC--&gt;&gt;TE: mc/set_action 响应（CommonResponse：task_id，state=SUCCESS）
+    loop 起立 ~5s（实测 115→101→102）
+        Note over MC: RL 策略推理〔推理框架：onnxruntime〕&lt;br/&gt;关节指令 1kHz〔OS 基础服务：iceoryx+CAN〕&lt;br/&gt;关节/IMU 反馈由传感器数据预处理（device_manager）1kHz/500Hz 供给〔EV-T1P-52〕
+    end
+    MC--&gt;&gt;TE: mc/common/state（Topic：动作完成，posture=四足站立）
+    TE-&gt;&gt;VOICE: audio/play_tts（Service：完成播报，trace_id）
+    VOICE--&gt;&gt;APP: TTS 音频（PipeWire TCP 6001/4713，非 ROS）
+    TE-&gt;&gt;APP: display/play_emotion（Service：表情）
+    VOICE--&gt;&gt;APP: interaction/tts_status（Topic：lumina 只读订阅→播报灯语联动〔EV-T1P-64〕）
+    TE--&gt;&gt;APP: interaction/state（Topic：task_state→任务态灯语联动）
+    VOICE--&gt;&gt;TE: interaction/tts_status（Topic：完成，按 trace_id 对齐→任务收尾闭环；同一话题的另一订阅者）
+</div></div>
+<p>要点：①意图经 agent/semantic_intent 单向广播进入平台，无请求-返回（T1 实证形态）；②站起动作序列 115→101→102 由 mc 内部状态机编排，TE 只下发目标动作；③进程内步骤（ASR→意图、AmRequest 仲裁）无外显接口；④<strong>灯带</strong>：本场景无显式灯带调用实证——灯语为 lumina <strong>常驻只读订阅联动</strong>（tts_status/interaction/state 等 9 路，EV-T1P-64）；显式 <code>LedStripCommand</code> 仅 UC1 跳舞实证，且 T1 中由 hal_sensor 进程承接——<strong>本产品灯效业务归本体 APP（表 3-1 lumina 行）</strong>，与 T1 进程归属的差异已在表 3-1 注明；⑤两条 tts_status 边为<strong>同一话题的两个订阅者</strong>：TE 做任务收尾闭环（按 trace_id 对齐），lumina 做说话灯效联动——多播语义，非两个话题。</p>
+<h3 id="3-6-3-场景二-跟我走">3.6.3 场景二「跟我走」</h3>
+<p>图 3-5 场景二流程图（T1 Pro 实测同构：UC3；视觉路径与牵手带步双路径；接口名为产品命名 <code>/robot/</code> 前缀，图内省略前缀）</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    U(["用户：语音「跟着我」并行走"])
+    subgraph BRAIN["大脑 Agent 子系统"]
+        VOICE["语音唤醒和语音识别〔aimrt_agent〕"]
+        INT["意图识别〔NLU/LLM〕"]
+    end
+    subgraph PLAT["软件平台子系统"]
+        TE["task 调度框架〔task_engine：AmRequest+follow 规则〕"]
+        HALC["传感器数据预处理〔hal_camera：双目〕"]
+        HALT["传感器数据预处理〔hal_rgbd：5×ToF〕"]
+        APP["本体 APP〔app_proxy 状态镜像/audio 播报/lumina 灯语〕"]
+    end
+    subgraph CERB["小脑子系统"]
+        PTR["融合感知〔person_track：检测+ReID〕"]
+        ODOM["融合感知〔legged_odom：EKF 里程计〕"]
+        FUS["融合感知〔coreon_fusion：多源融合〕"]
+        AVO["实时避障〔coreon_fusion 避障链〕"]
+        FLW["跟随〔follow_node〕"]
+        MC["运控〔mc：输入源仲裁+WBC〕"]
+    end
+
+    U --&gt;|"音频输入"| VOICE
+    VOICE --&gt;|"agent/asr_result（Topic）"| INT
+    INT --&gt;|"agent/semantic_intent（Topic：value=跟随）"| TE
+    HALC --&gt;|"sensor/camera/head_stereo_left（Topic：Image，10fps，iceoryx）"| PTR
+    HALT --&gt;|"sensor/tof/*/points（Topic：5 路，20Hz，iceoryx）"| FUS
+    ODOM --&gt;|"odom、tf（Topic：位姿，~10Hz）"| PTR
+    ODOM --&gt;|"odom、tf"| FLW
+    ODOM --&gt;|"odom/status（Topic：UInt8 可信度状态码→跟随门控 require_trusted；不可信=任务仲裁拒绝 reason 66〔T1 AmRequest 实证码〕）"| TE
+    TE --&gt;|"perception/set_follow_perception_task（Service：trigger=启动）"| PTR
+    TE --&gt;|"follow/set_follow_task_biped（Service：跟随任务参数）"| FLW
+    PTR --&gt;|"perception/follow_candidates（Topic：归一化目标框，~30Hz）"| TE
+    FLW --&gt;|"follow/state（Topic：state 0-7）"| TE
+    FLW --&gt;|"mc/set_input_source（Service：name=follow，priority=40，timeout=1000ms）"| MC
+    FLW --&gt;|"mc/locomotion/velocity（Topic：source=follow，v/ω）"| MC
+    FUS --&gt;|"perception/target_info（Topic：Detection2DArray）"| AVO
+    AVO --&gt;|"perception/fusion_state（Topic：is_avoidance/obstacle_info）"| TE
+    AVO --&gt;|"mc/locomotion/velocity（Topic：避障改写——不新增控制权，叠写当前持权源指令，无需 mc/set_input_source；T1 注册源表无 coreon_fusion〔EV-T1P-29〕）"| MC
+    TE --&gt;|"perception/obstacle_check（Service：direction/range/form）"| AVO
+    MC --&gt;|"mc/common/state（Topic：held_state/is_moving，50Hz）"| TE
+    TE --&gt;|"interaction/state（Topic：task_state=跟随+form_state → lumina 任务态灯语联动）"| APP
+    VOICE --&gt;|"interaction/tts_status（Topic）→ lumina 订阅，播报灯语联动〔EV-T1P-64〕"| APP
+</div></div>
+<p>图 3-6 场景二时序图（含目标搜索、控制权抢占与牵手带步备选路径）</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 用户
+    participant INT as 意图识别〔Agent NLU/LLM〕
+    participant VOICE as 语音唤醒和语音识别〔Agent TTS〕
+    participant TE as task 调度框架〔task_engine〕
+    participant ODOM as 融合感知〔legged_odom〕
+    participant PTR as 融合感知〔person_track〕
+    participant FLW as 跟随〔follow_node〕
+    participant AVO as 实时避障〔coreon_fusion〕
+    participant MC as 运控〔mc〕
+    participant APP as 本体 APP〔app_proxy/audio/lumina〕
+
+    U-&gt;&gt;INT: 语音「跟着我」（asr_result→意图，进程内）
+    INT-&gt;&gt;TE: agent/semantic_intent（Topic：value=跟随）
+    ODOM--&gt;&gt;TE: odom/status（Topic：odom 可信门控）〔EV-T1P-28〕
+    Note over TE: 进程内：任务仲裁（对标 T1 AmRequest）+ rule follow.yaml&lt;br/&gt;（电量≥6%；require_trusted=true）
+    TE-&gt;&gt;PTR: perception/set_follow_perception_task（Service：trigger=启动）
+    TE-&gt;&gt;FLW: follow/set_follow_task_biped（Service：跟随参数）
+    ODOM--&gt;&gt;PTR: odom、tf（Topic：跟踪坐标系）
+    loop 目标搜索（person_track 主环 33ms〔EV-T1P-54〕）
+        Note over PTR: TensorRT 推理〔推理框架〕：yolov8 检测+CLIP-ReID
+        PTR--&gt;&gt;TE: perception/follow_candidates（Topic：归一化框；未锁定时为空）
+    end
+    FLW--&gt;&gt;TE: follow/state（Topic：state=1 未发现 → 2 跟随中）
+    alt 视觉锁定成功
+        FLW-&gt;&gt;MC: mc/set_input_source（Service：follow，pri=40，timeout=1000）
+        FLW-&gt;&gt;MC: mc/locomotion/velocity（Topic：source=follow，≥10Hz）
+        AVO--&gt;&gt;MC: mc/locomotion/velocity（Topic：避障改写叠加——不新增控制权，无需 mc/set_input_source）〔EV-T1P-43/29〕
+        AVO--&gt;&gt;TE: perception/fusion_state（Topic：is_avoidance）
+    else 牵手带步（UC3 实测生效路径）
+        U-&gt;&gt;MC: 牵手（非 ROS：关节力矩感知）
+        MC--&gt;&gt;TE: mc/common/state（Topic：held_state=LEFT_HELD，is_held）
+        Note over MC: 变形→WBC 力导引带步，不经 velocity〔EV-T1P-05〕
+    end
+    MC--&gt;&gt;TE: mc/common/state（Topic：is_moving/posture，50Hz）
+    TE--&gt;&gt;APP: interaction/state（Topic：task_state=跟随 → lumina 任务态灯语联动〔EV-T1P-64〕）
+    TE-&gt;&gt;VOICE: audio/play_tts（Service：确认播报，trace_id）
+    VOICE--&gt;&gt;APP: TTS 音频（PipeWire TCP 6001/4713，非 ROS）
+    VOICE--&gt;&gt;APP: interaction/tts_status（Topic：lumina 订阅→播报灯语联动）
+    TE-&gt;&gt;APP: display/play_emotion（Service：表情）
+</div></div>
+<p>要点：①跟随为双路径设计——视觉路径（person_track→perception/follow_candidates→follow_node→mc/locomotion/velocity）与牵手带步路径（held_state 力导引，不经 velocity）；②确认播报与灯语联动链：audio/play_tts→语音模块合成→PipeWire 直连播放；lumina 常驻订阅 tts_status/interaction/state 自主灯语（EV-T1P-64），显式 LedStripCommand 在跟随场景无实证调用（舞蹈类场景才有）；③图中 FUS/AVO 为<strong>逻辑模块</strong>视图，V1 部署形态为融合引擎+实时避障同进程（§3.10.2 注记 5）。</p>
+<h3 id="3-6-4-Topic-接口列表-完备场景">3.6.4 Topic 接口列表（完备场景）</h3>
+<p>表 3-2 Topic 接口列表（接口名为本产品命名：<code>/robot/</code> 前缀，叶名与分段尽量沿用 T1 实测名；与第 5/6 章 IF 条目对应处标注编号（第 5/6 章已同步 <code>/robot/</code> 前缀），未标注者为本章暂定名——正式定名归各特性域章节；★〔T1 对标名列〕= T1 Pro SDK 官方对外 30 接口面之一（对外暴露优先级参考）；nav2 内部/调试流/proto 桥通道未收录，全量见 A §5.1）</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>接口（产品命名）</th>
+<th>T1 对标名</th>
+<th>接口功能简介</th>
+<th>入参（发布方填写）</th>
+<th>出参（订阅方读取）</th>
+<th>频次</th>
+<th>注意事项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/robot/agent/asr_result</td>
+<td>/aima/agent/asr_result ★</td>
+<td>语音识别结果</td>
+<td><code>header</code>；<code>text</code> 识别文本；<code>event_id</code>；<code>is_final</code> 是否终稿；<code>confidence</code>；<code>language</code></td>
+<td>同负载；task_engine/lumina 订阅</td>
+<td>流式（中间结果+终稿）</td>
+<td><code>is_final=false</code> 为中间结果；唤醒后有效</td>
+</tr>
+<tr>
+<td>/robot/agent/semantic_intent</td>
+<td>/aima/agent/semantic_intent</td>
+<td>语义意图（LLM 结构化输出）</td>
+<td><code>header</code>；<code>type</code> 意图类型；<code>value</code></td>
+<td>同负载；task_engine 订阅</td>
+<td>事件级</td>
+<td>单向广播无返回；确认类 <code>type=confirmation value=yes/no</code></td>
+</tr>
+<tr>
+<td>/robot/system/state（IF-TS-05）</td>
+<td>/aima/sm/system_state</td>
+<td>整机状态机当前状态（门控源）</td>
+<td><code>header</code>；<code>cur_state</code>；<code>cur_status</code>；<code>next_state</code></td>
+<td>同负载；全图 8 订阅</td>
+<td>1Hz 级+迁移事件</td>
+<td>非就绪态多数服务返回 NOT_READY；<code>next_state</code> 仅 IN_MOVE 有效</td>
+</tr>
+<tr>
+<td>/robot/interaction/state</td>
+<td>/aima/interaction/state ★</td>
+<td>交互长任务状态（任务+形态+模式）</td>
+<td><code>header</code>；<code>interaction_id</code>；<code>mp_state</code> 上肢动作态；<code>form_state</code> 形态；<code>action_info</code>；<code>mode</code>(0 室内/1 户外/2 超能)；<code>mode_speed</code>；<code>task_state</code>(1-17 任务类型)</td>
+<td>同负载；全图 6 订阅</td>
+<td>事件+周期</td>
+<td>App/云状态镜像数据源</td>
+</tr>
+<tr>
+<td>/robot/mc/common/state</td>
+<td>/aima/mc/common/state ★</td>
+<td>运控全量状态（权威状态源）</td>
+<td><code>header</code>；<code>input_source</code>(name/priority/timeout)；<code>action_info</code>(current_action/source/status/switch_ready)；<code>runtime_model</code>；<code>motion_status</code>；<code>fsm_state</code>；<code>form_state</code>；<code>posture</code>(roll/pitch/yaw)；<code>is_moving</code>；<code>is_fallen</code>；<code>lift_state</code>(提起概率/阈值)；<code>task_info</code>(task_id)；<code>held_state</code>(牵手态)</td>
+<td>同负载；全图 10 订阅</td>
+<td>50Hz〔EV-T1P-12〕</td>
+<td>下发动作前看 <code>switch_ready</code>；McActionStatus 100=RUNNING（≠CommonState 语义）</td>
+</tr>
+<tr>
+<td>/robot/mc/locomotion/velocity</td>
+<td>/aima/mc/locomotion/velocity ★</td>
+<td>走跑控制指令（全图中枢）</td>
+<td><code>source</code> 输入源名(rc/vr/app_proxy/interaction/pnc/follow…)；<code>forward_velocity</code> m/s(+前−后)；<code>lateral_velocity</code>(+左)；<code>angular_velocity</code>(+左旋)；<code>pitch_velocity</code>；<code>level</code> 档位</td>
+<td>同负载；mc 仲裁后消费</td>
+<td>建议 ≥10Hz 持续</td>
+<td><strong>必须先 /robot/mc/set_input_source（IF-TS-11）抢占</strong>；1000ms 为<strong>看门狗续租窗口</strong>——每帧发布即续租，持续发布可无限期持有（跟随即此模式）；仅连续静默 1000ms（节点崩溃/断链）才自动释放并按优先级顺延，<strong>非任务时长限制</strong>；全图 11 发布源〔EV-T1P-30〕</td>
+</tr>
+<tr>
+<td>/robot/sensor/bms/state</td>
+<td>/aima/hal/bms/state ★</td>
+<td>电源/电池数据</td>
+<td><code>header</code>；<code>manufacturer/serial_number</code>；protocol/hw/sw 版本×3；<code>power_request</code>；<code>status</code>；<code>voltage</code>(mV 级)；<code>current</code>；<code>power</code>；<code>temperature</code>；<code>remaining_capacity</code>；<code>remaining_capacity_percentage</code>；<code>cycle_count</code>；<code>cycle_total_capacity</code></td>
+<td>同负载；7 订阅（Agent/TE/ota…）</td>
+<td>周期（频率未实证）</td>
+<td>低电触发功能门控（REASON_LOW_BATTERY）</td>
+</tr>
+<tr>
+<td>/robot/sensor/joint/state（IF-SP-03）</td>
+<td>/aima/hal/joint/state ★</td>
+<td>关节状态反馈（14 关节）</td>
+<td><code>header</code>；<code>joints[]</code>:JointState(<code>name</code>；<code>position</code>；<code>velocity</code>；<code>effort</code>；<code>coil_temp</code>；<code>motor_temp</code>；<code>motor_vol</code>)</td>
+<td>同负载；mc/legged_odom/感知消费</td>
+<td>1kHz〔EV-T1P-52〕</td>
+<td>iceoryx 板内发布不出 DDS 图；跨板订阅收不到（生产模式）</td>
+</tr>
+<tr>
+<td>/robot/sensor/imu/torso（IF-SP-03）</td>
+<td>/aima/hal/imu/torso/state</td>
+<td>躯干 IMU 原始数据</td>
+<td>sensor_msgs/Imu（角速度/线加速度/姿态）</td>
+<td>同负载；coreon_fusion/legged_odom 消费</td>
+<td>500Hz〔EV-T1P-52〕</td>
+<td>同上 iceoryx；跨板实取走 legged_odom 转发 <code>/odom_torso</code>、<code>/torso_imu_orientation</code></td>
+</tr>
+<tr>
+<td>/robot/odom（IF-SP-11）</td>
+<td>/odom ★相关</td>
+<td>足式里程计（定位基准）</td>
+<td><code>header</code>；<code>pose</code>(含 covariance)；<code>twist</code></td>
+<td>同负载；7 订阅（nav2/follow/感知）</td>
+<td>~10Hz（500Hz÷抽取 50）</td>
+<td>坐标系 odom；跟随/导航基准</td>
+</tr>
+<tr>
+<td>/robot/odom/status</td>
+<td>/odom/status</td>
+<td>里程计可信度状态码（质量自评）</td>
+<td><code>data</code>(UInt8 状态码：被抱起/跌倒/特殊动作态等条件下 EKF 输出漂移，legged_odom 按 mc 动作态与触地状态自评可信度)</td>
+<td>同负载；<strong>task_engine 订阅（唯一消费者，实证）</strong></td>
+<td>事件级（状态变化）</td>
+<td>任务门控用：follow 规则 <code>odom_condition.require_trusted</code> 受理前检查+运行中监控；不可信→拒绝/取消，关联 /robot/task/request 拒绝 reason=66（ODOM_STATUS_BLOCKED）〔EV-T1P-28/31/37/51〕；「质量随流→任务门控」模式实例（FR-SP-07×FR-TS-07 联动）</td>
+</tr>
+<tr>
+<td>/robot/tf、/robot/tf_static（IF-SP-11）</td>
+<td>/tf、/tf_static</td>
+<td>坐标变换树</td>
+<td>TFMessage(<code>transforms[]</code>:frame/child/transform)</td>
+<td>同负载；9 订阅</td>
+<td>动态(odom→base)+静态(传感器外参)</td>
+<td>静态外原来自标定文件；nav2 强依赖</td>
+</tr>
+<tr>
+<td>/robot/sensor/camera/head_stereo_left(_right)（IF-SP-01 命名模式）</td>
+<td>/aima/hal/camera/head_stereo_left(_right)</td>
+<td>头部双目图像</td>
+<td>sensor_msgs/Image(2592×1944)</td>
+<td>同负载；person_track/percep 订阅</td>
+<td>10fps〔EV-T1P-48〕</td>
+<td>iceoryx 板内（ROS 图 publisher=0）；跨板不可见</td>
+</tr>
+<tr>
+<td>/robot/sensor/tof/{main,front,rear,left,right}/points（IF-SP-02）</td>
+<td>/ofilm/tof/{main,front,rear,left,right}/point_cloud</td>
+<td>5 路 ToF 点云</td>
+<td>sensor_msgs/PointCloud2（组织点云）</td>
+<td>同负载；coreon_fusion 订阅</td>
+<td>20Hz〔EV-T1P-46〕</td>
+<td>iceoryx；控制面 rk/数据面 orin 分板</td>
+</tr>
+<tr>
+<td>/robot/perception/follow_candidates</td>
+<td>/perception/follow_candidates ★</td>
+<td>跟随候选目标列表</td>
+<td><code>header</code>；<code>perception_list[]</code>(<code>id</code>；<code>x,y</code> 归一化左上；<code>w,h</code> 归一化宽高)</td>
+<td>同负载；TE/app_proxy 订阅</td>
+<td>~30Hz（person_track 主环 33ms〔EV-T1P-54〕）</td>
+<td><strong>归一化坐标非米制</strong>；选定目标经 <code>follow_target_selection</code> 下发</td>
+</tr>
+<tr>
+<td>/robot/follow/state</td>
+<td>/aima/algo/follow/state ★</td>
+<td>跟随任务状态</td>
+<td><code>state</code>(0 空闲/1 未发现/2 跟随中/3 丢失/4 跟错/5 太远/6 太近/7 受阻)</td>
+<td>同负载；TE 订阅</td>
+<td>事件+周期</td>
+<td>丢失防抖：双足 1500ms/四足室内 3000ms〔EV-T1P-37〕</td>
+</tr>
+<tr>
+<td>/robot/perception/fusion_state（IF-SP-08）</td>
+<td>/aima/coreon_fusion/state</td>
+<td>融合避障状态</td>
+<td><code>header</code>；<code>is_avoidance</code> 是否避障中；<code>source</code> 触发源；<code>obstacle_info</code></td>
+<td>同负载；TE/app 订阅</td>
+<td>事件级</td>
+<td>跟随/导航避障联动信号</td>
+</tr>
+<tr>
+<td>/robot/interaction/tts_status</td>
+<td>/interaction/tts_status ★</td>
+<td>TTS 播报状态</td>
+<td><code>text</code>；<code>priority</code>；<code>trace_id</code>；<code>tts_status</code>(播放中/完成/失败)；<code>domain</code>；<code>error_message</code></td>
+<td>同负载；TE/lumina 订阅</td>
+<td>事件级</td>
+<td>打断/完成判定按 <code>trace_id</code> 对齐</td>
+</tr>
+<tr>
+<td>/robot/agent/face_info</td>
+<td>/aima/agent/face_info</td>
+<td>人脸信息（交互视觉输出）</td>
+<td><code>header</code>；<code>list[]</code>:FaceInfo(<code>face_id</code>…)</td>
+<td>同负载；Agent 侧 3 订阅</td>
+<td>事件级</td>
+<td>迎宾/记忆联动（greeting_state 配套）</td>
+</tr>
+<tr>
+<td>/robot/permission_state</td>
+<td>/aima/robot/permission_state</td>
+<td>隐私权限状态（安全门控）</td>
+<td><code>microphone</code>；<code>camera</code>；<code>location</code>；<code>updated_timestamp</code></td>
+<td>同负载；5 订阅（相机/ToF 门控）</td>
+<td>事件级</td>
+<td>权限关闭→相机/麦克风停流</td>
+</tr>
+<tr>
+<td>/robot/sensor/touch/state</td>
+<td>/aima/hal/touch/state ★</td>
+<td>头部触摸事件</td>
+<td><code>header</code>；<code>sensor_id</code>；<code>event_type</code>(1-6 单击~六击/8 左滑/9 右滑)</td>
+<td>同负载；3 订阅</td>
+<td>事件级</td>
+<td>TouchEnable 服务可开关</td>
+</tr>
+<tr>
+<td>/robot/display_state</td>
+<td>/aima/display_state</td>
+<td>胸屏当前表情回显</td>
+<td><code>header</code>；<code>emoticon_id</code></td>
+<td>同负载；TE 订阅</td>
+<td>事件级</td>
+<td>屏侧回显</td>
+</tr>
+<tr>
+<td>/robot/perception/semantic_env（IF-SP-09）</td>
+<td>/percep/detect/env</td>
+<td>环境判定（室内外）</td>
+<td><code>data</code>(0 室内/1 室外/2 判定中)</td>
+<td>同负载；TE 订阅</td>
+<td>低频周期</td>
+<td>与 mode（室内限动作）联动</td>
+</tr>
+<tr>
+<td>/robot/perception/follow_brightness_dark</td>
+<td>/perception/follow_brightness_dark</td>
+<td>跟随亮度门控</td>
+<td><code>allow_follow</code>；<code>brightness</code>(0-255 灰度均值)</td>
+<td>同负载；TE/感知订阅</td>
+<td>活跃时 10Hz〔EV-T1P-55〕</td>
+<td>过暗禁跟随；set_brightness_enable 可开关</td>
+</tr>
+<tr>
+<td>/robot/navi/state</td>
+<td>/aima/algo/navi/state ★</td>
+<td>导航任务状态</td>
+<td><code>state</code>(0 空闲/1 初始化/2 导航中/3 暂停/4 到达/5 失败/6 取消/7 低功耗/8 初始化失败)；<code>goal</code> PoseStamped；<code>description</code></td>
+<td>同负载；TE/map_server 订阅</td>
+<td>2s 周期（B：nav2_t1_dog.yaml state_publish_period=2.0）</td>
+<td>LOW_POWER=7 对应 nav2 被 lifecycle pause</td>
+</tr>
+<tr>
+<td>/robot/map/build_state</td>
+<td>/aima/map/build_state</td>
+<td>建图任务状态</td>
+<td><code>stage</code>(1 建图/2 保存/3 取消)；<code>state</code>；<code>mapping_type</code>(1 手动/2 自动探索)；<code>task_id</code>；<code>map_info</code>；<code>png_data[]</code>；<code>trajectory[]</code></td>
+<td>同负载；TE/app 订阅</td>
+<td>事件+周期</td>
+<td>与 /robot/map/command 服务配对</td>
+</tr>
+<tr>
+<td>/robot/resource/state（IF-TS-10）</td>
+<td>/sys_guard/active_scene</td>
+<td>当前活动资源场景</td>
+<td><code>key</code>；<code>value</code>(JSON)</td>
+<td>同负载；资源调度消费</td>
+<td>场景切换事件</td>
+<td>cgroup/算力档位依据</td>
+</tr>
+<tr>
+<td>/robot/audio/play_state</td>
+<td>/aima/hal/audio/play_state</td>
+<td>音频播放状态变化</td>
+<td><code>pkg_name</code> 来源包名；<code>state</code> PlayStateType</td>
+<td>同负载；Agent/TE 订阅</td>
+<td>事件级</td>
+<td>与 /robot/audio/play_audio_file 及 T1 ControlMusic 联动</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3-6-5-Service-接口列表-完备场景">3.6.5 Service 接口列表（完备场景）</h3>
+<p>表 3-3 Service 接口列表（接口名为本产品命名：<code>/robot/</code> 前缀＋保留 T1 动词语义（Set/Get/Play/Load/Capture 等，去掉与路径段重复的域词 Mc/Hal）；与第 5/6 章 IF 条目对应处标注编号（第 5/6 章已同步 <code>/robot/</code> 前缀；名字一致标 IF-xx、仅语义对标标「对标 IF-xx」），未标注者为本章暂定名——正式定名归各特性域章节；★〔T1 对标名列〕= T1 Pro SDK 官方面（对外暴露优先级参考）；平台内部 proto 桥/参数服务未收录，全量见 A §5.2）</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>接口（产品命名）</th>
+<th>T1 对标名</th>
+<th>接口功能简介</th>
+<th>入参（Request）</th>
+<th>出参（Response）</th>
+<th>注意事项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/robot/task/request（IF-TS-01）</td>
+<td>/aimdk_msgs/srv/AmRequest</td>
+<td>任务仲裁请求（长任务统一入口）</td>
+<td><code>header</code>；<code>token_common</code>(source,token)；<code>source_type</code>(0-9 APP/AGENT/…/SYSTEM)；<code>requester_module</code>；<code>am_mode</code>(0 按 function_name/1 按 action)；<code>function_name</code>；<code>request_action_type</code>+<code>request_action_id</code>；<code>scene_tag</code>；<code>role_name</code></td>
+<td><code>header</code>；<code>arbitration_result</code>(0 UNKNOWN/1 拒绝/2 抢占/3 取消/4 二次确认/5 成功)；<code>arbitration_code</code>+<code>arbitration_reason</code>(0-66)；<code>extra_message</code>(JSON)；<code>token</code></td>
+<td>App 玩法先过此口；同一时刻仅一个长任务（reason=15）〔EV-T1P-31/38〕</td>
+</tr>
+<tr>
+<td>/robot/task/cancel（对标 IF-TS-02 取消子面）</td>
+<td>/aimdk_msgs/srv/AmCancel</td>
+<td>取消长任务</td>
+<td><code>header</code>；<code>token_common</code>；<code>source_type</code>；<code>cancel_reason</code>；<code>am_mode</code>(0-4 按动作/动画/任务名/资源类型/全部)；<code>cancel_target_id</code></td>
+<td><code>header</code>；<code>arbitration_result</code>(1 已取消/2 失败)；<code>reason_message</code></td>
+<td>五粒度取消〔EV-T1P-41〕</td>
+</tr>
+<tr>
+<td>/robot/task/control（IF-TS-02）</td>
+<td>/aimdk_msgs/srv/ControlTask</td>
+<td>通用任务控制（13 类任务起停暂停取消）</td>
+<td><code>header</code>；<code>control_type</code>(1-4)；<code>task_type</code>(1 交互/2 跟随/…/11 环绕/12 希区柯克/13 合影)；<code>interaction_id</code>；<code>task_name</code>；<code>animation_id</code>；<code>direction/step/distance</code>；<code>token</code></td>
+<td><code>header</code>；<code>success</code>；<code>info</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>/robot/mc/set_action</td>
+<td>/aimdk_msgs/srv/SetMcAction ★</td>
+<td>设置运动模式/动作（站起/躺下/变形/急停…）</td>
+<td><code>header</code>；<code>source</code>；<code>command.action.value</code>(McAction 枚举分段〔EV-T1P-13〕：1-3 被动/阻尼/四足躺、10-22 变形、<strong>100-124 四足系列</strong>（101 四足站立、102 行走、115 四足预备站立）、<strong>200-303 双足系列</strong>（201 双足站立、300 WBC）、400 转圈、1001-1019 Q 系列——请求只带<strong>单一目标动作</strong>，中间动作由 mc 内部状态机自动迁移)；<code>action_desc</code></td>
+<td><code>response.header</code>；<code>task_id</code>；<code>state</code>(CommonState)</td>
+<td>异步：受理后<strong>轮询 /robot/mc/get_action</strong> 至 200→100；限频 500ms（-10001）；source 空(-10002)；白名单/形态/电量门控〔EV-T1P-41〕</td>
+</tr>
+<tr>
+<td>/robot/mc/get_action</td>
+<td>/aimdk_msgs/srv/GetMcAction ★</td>
+<td>查询当前运动状态</td>
+<td><code>header</code></td>
+<td><code>header</code>；<code>info</code>(current_action/source/status/switch_ready)</td>
+<td>status：0 空闲/100 运行/200 切换中</td>
+</tr>
+<tr>
+<td>/robot/mc/set_motion</td>
+<td>/aimdk_msgs/srv/SetMcMotion ★</td>
+<td>全身动作（模仿/自定义模型）</td>
+<td><code>header</code>；<code>source</code>；<code>type</code>(1 QY/2 灵创)；<code>motion</code>；<code>model</code>；<code>resource</code>；<code>interrupt</code>；<code>operation</code>(1 预加载/2 执行)</td>
+<td><code>header</code>；<code>task_id</code>；<code>state</code></td>
+<td>PRELOAD→EXECUTION 两段式</td>
+</tr>
+<tr>
+<td>/robot/mc/set_preset_motion</td>
+<td>/aimdk_msgs/srv/SetMcPresetMotion ★</td>
+<td>预设动作（头/腰/手区域）</td>
+<td><code>header</code>；<code>source</code>；<code>area</code>(位掩码 1 左手/2 右手/4 头/8 腰)；<code>motion</code>；<code>interrupt</code>；<code>ani_path</code></td>
+<td><code>header</code>；<code>task_id</code>；<code>state</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>/robot/mc/set_input_source（IF-TS-11）</td>
+<td>/aimdk_msgs/srv/SetMcInputSource ★</td>
+<td>抢占速度控制权</td>
+<td><code>header</code>；<code>action</code>(ADD/MODIFY/DELETE/DISABLE/ENABLE)；<code>input_source</code>(<code>name</code>/<code>priority</code> 0-100/<code>timeout</code> ms 默认 1000)</td>
+<td><code>header</code>；<code>task_id</code>；<code>state</code></td>
+<td>发 /robot/mc/locomotion/velocity 前必做；高优先级绝对抢占/等优先级先入为主/看门狗到期顺延；<strong>timeout 是无续约静默窗口</strong>（每帧 velocity 续租、可无限期持有，静默 1000ms=失联保护性释放，非任务时长）；正常收尾显式 DELETE；修改仅存 RAM〔EV-T1P-29〕</td>
+</tr>
+<tr>
+<td>/robot/mc/get_current_input_source</td>
+<td>/aimdk_msgs/srv/GetCurrentInputSource ★</td>
+<td>查询当前控制输入源</td>
+<td><code>header</code></td>
+<td><code>response</code>；<code>input_source</code></td>
+<td>控制权闭环校验</td>
+</tr>
+<tr>
+<td>/robot/audio/play_tts</td>
+<td>/aimdk_msgs/srv/PlayTts ★</td>
+<td>语音合成播报</td>
+<td><code>header</code>；<code>tts_req</code>(文本/优先级/trace_id/语速等)</td>
+<td><code>header</code>；<code>tts_resp</code></td>
+<td>完成态经 tts_status；打断用 StopTtsTraceId</td>
+</tr>
+<tr>
+<td>/robot/display/play_emotion</td>
+<td>/aimdk_msgs/srv/PlayEmotion ★</td>
+<td>表情/视频播放（胸屏）</td>
+<td><code>header</code>；<code>type</code>；<code>emotion_ids[]</code>；<code>file_paths[]</code>；<code>priority</code>；<code>loop_count</code></td>
+<td><code>header</code></td>
+<td>display_ui 渲染</td>
+</tr>
+<tr>
+<td>/robot/audio/play_audio_file</td>
+<td>/aimdk_msgs/srv/PlayAudioFile ★</td>
+<td>播放音频文件</td>
+<td><code>header</code>；<code>file</code>(AudioFile 路径等)</td>
+<td><code>response</code></td>
+<td>另有 TCP 6001/4713 PulseAudio 兼容直连</td>
+</tr>
+<tr>
+<td>/robot/audio/get_volume、set_volume、get_mute、set_mute（四口合一行为组）</td>
+<td>GetVolume/SetVolume/GetMute/SetMute ★</td>
+<td>音量/静音查询设置</td>
+<td><code>header</code>[；<code>audio_volume</code> / <code>is_mute</code>]</td>
+<td><code>response</code>；<code>audio_volume</code> / <code>is_mute</code></td>
+<td>四口合一行为组</td>
+</tr>
+<tr>
+<td>/robot/follow/task_ctrl</td>
+<td>/aimdk_msgs/srv/FollowTaskCtrl</td>
+<td>跟随任务控制（跟随/召唤/乘梯）</td>
+<td><code>header</code>；<code>trigger</code>；<code>type</code>(1 跟随/2 召唤/3 人脸/4 人体/5 方向/6 进梯/7 出梯/8 拍照跟随)；<code>direction</code>(1 左/2 右/3 近/4 远)；<code>id</code>；<code>x/y/h/w</code> 框；<code>timestamp</code>；<code>token</code></td>
+<td><code>header</code></td>
+<td>状态看 follow/state</td>
+</tr>
+<tr>
+<td>/robot/perception/set_follow_perception_task（对标 IF-SP-10）</td>
+<td>/perception/set_follow_perception_task</td>
+<td>跟随感知任务开关</td>
+<td><code>header</code>；<code>trigger</code></td>
+<td><code>response</code></td>
+<td>person_track 与 TE 双端提供</td>
+</tr>
+<tr>
+<td>/robot/follow/set_follow_task_biped</td>
+<td>SetFollowTaskBiped</td>
+<td>双足跟随参数下发</td>
+<td>/robot/follow/task_ctrl 字段子集</td>
+<td><code>response</code></td>
+<td>follow_node 承接</td>
+</tr>
+<tr>
+<td>/robot/perception/obstacle_check（IF-SP-07）</td>
+<td>/aimdk_msgs/srv/ObstacleCheck</td>
+<td>定向障碍检查</td>
+<td><code>header</code>；<code>range</code>；<code>height</code>；<code>direction</code>(位掩码 1 前/2 后/4 左/8 右/16 上)；<code>form</code>(1 四足/2 双足)</td>
+<td><code>header</code>；<code>has_obstacle</code>；<code>obstacle_direction/confidence/type</code></td>
+<td>coreon_fusion（实时避障）承接</td>
+</tr>
+<tr>
+<td>/robot/perception/set_avoidance</td>
+<td>/aimdk_msgs/srv/SetAvoidance</td>
+<td>避障开关</td>
+<td><code>header</code>；<code>trigger</code>；<code>source</code></td>
+<td><code>header</code></td>
+<td>coreon_fusion 承接</td>
+</tr>
+<tr>
+<td>/robot/navi/set_task</td>
+<td>/navi/command（SetNaviTask）★</td>
+<td>导航任务控制</td>
+<td><code>header</code>；<code>action</code>(0 开始/1 暂停/2 继续/3 终止/4 进低功耗/5 退低功耗)；<code>goal</code> PoseStamped；<code>description</code></td>
+<td><code>response</code></td>
+<td>状态看 navi/state；低功耗=lifecycle pause</td>
+</tr>
+<tr>
+<td>/robot/navi/load_map</td>
+<td>/navi/loadmap（LoadNaviMap）★</td>
+<td>加载地图</td>
+<td><code>header</code>；<code>map_path</code>；<code>mode</code>(0 全量/1 仅地图/2 仅虚拟墙)</td>
+<td><code>response</code>；<code>msg</code>；<code>rlt_code</code>(1 成功)</td>
+<td>map_server 承接</td>
+</tr>
+<tr>
+<td>/robot/map/command</td>
+<td>/aimdk_msgs/srv/MapCommand</td>
+<td>建图任务（开始/取消/保存）</td>
+<td><code>header</code>；<code>command</code>(1/2/3)；<code>mapping_type</code>(1 手动/2 自动探索)；<code>task_id</code>；<code>map_name</code>；<code>token</code></td>
+<td><code>header</code>；<code>task_id</code>；<code>map_name</code>；<code>save_time</code></td>
+<td>进度看 /robot/map/build_state</td>
+</tr>
+<tr>
+<td>/robot/sensor/camera/capture_jpeg_image</td>
+<td>/aima/hal/camera/CaptureJpegImage ★</td>
+<td>获取相机单帧 JPEG</td>
+<td><code>request</code>；<code>camera_id</code>；<code>timeout_ms</code></td>
+<td><code>response</code>；<code>jpeg</code>(JpegImage)</td>
+<td>相机权限关闭时失败</td>
+</tr>
+<tr>
+<td>/robot/sensor/set_camera_stream、set_tof_stream（IF-SP-05）</td>
+<td>SetHalCameraStream / SetHalTofStream</td>
+<td>相机/ToF 供电出流掩码</td>
+<td><code>request</code>；<code>trace_id</code>；<code>req_type</code>(0 设置/1 查询)；<code>power_ctrl_mask</code>；<code>stream_ctrl_mask</code>(bit per 传感)</td>
+<td><code>response</code>；<code>switch_state</code>(切换中/已切换)；<code>target_state_mask</code></td>
+<td>省电态与系统状态联动</td>
+</tr>
+<tr>
+<td>/robot/system/get_state、migrate（IF-TS-06）</td>
+<td>GetSystemState / MigrateSystemState</td>
+<td>整机状态查询/迁移</td>
+<td><code>header</code>[；<code>state</code> 目标态]</td>
+<td><code>cur_state</code>；<code>cur_status</code></td>
+<td>迁移<strong>受理≠成功</strong>（结果看 /robot/system/state）；非法迁移被拒〔EV-T1P-35〕</td>
+</tr>
+<tr>
+<td>/robot/system/shutdown_task</td>
+<td>/aimdk_msgs/srv/ShutdownTask ★</td>
+<td>主动关机</td>
+<td><code>header</code>；<code>token</code>(source 不得为空，否则拒绝)</td>
+<td><code>header</code></td>
+<td>断电执行在 SetPowerDown/SetPowerDownOrin</td>
+</tr>
+<tr>
+<td>/robot/servo/set</td>
+<td>/aimdk_msgs/srv/SetServo ★</td>
+<td>舵机控制（相机抬升）</td>
+<td><code>request</code>；<code>position</code>(0-100)；<code>speed</code></td>
+<td><code>header</code></td>
+<td>状态看 servo/state</td>
+</tr>
+<tr>
+<td>/robot/led/command</td>
+<td>/aimdk_msgs/srv/LedStripCommand ★</td>
+<td>整机灯带灯语</td>
+<td><code>request</code>；<code>led_strip_mode</code>(0-20 预设/254 自定义呼吸/255 自定义闪烁)；<code>r/g/b</code>；<code>period</code></td>
+<td><code>header</code></td>
+<td>hal_sensor 承接</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>频次/参数实证来源：50Hz〔EV-T1P-12〕、1kHz/500Hz〔EV-T1P-52〕、20Hz〔EV-T1P-46〕、10fps〔EV-T1P-48〕、~30Hz〔EV-T1P-54〕、亮度 10Hz〔EV-T1P-55〕、navi/state 2s〔B：<code>orin_full/.../nav2_t1_dog.yaml</code> state_publish_period〕；其余事件级或未实测（已标注）。接口语义与枚举全集见 A §5.1/§5.2 与 D《接口说明.md》（按「T1 对标名」列对照实测原名）。</p>
+</blockquote>
+<hr />
+<h2 id="3-7-业务流走查-一句-跟我走-职责衔接验证">3.7 业务流走查：一句「跟我走」（职责衔接验证）</h2>
+<p>以语音发起跟随为例，验证三个子系统在流程中各司其职、交接物清晰（T1 Pro 同场景实证见 UC3 [EV-T1P-28]）：</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>子系统</th>
+<th>动作</th>
+<th>交接物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 感知理解</td>
+<td>大脑</td>
+<td>唤醒→ASR 出文本；视觉识别出「面前有人」上下文</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2 意图</td>
+<td>大脑</td>
+<td>意图识别输出 <code>{意图:跟随, 参数:-}</code>（本地/云端两级仲裁）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>3 规划</td>
+<td>大脑</td>
+<td>规划判定为单步任务，直接下发任务意图</td>
+<td>① 任务意图 → 平台</td>
+</tr>
+<tr>
+<td>4 准入与仲裁</td>
+<td>平台</td>
+<td>调度框架门控（电量≥阈值、odom 可信、无冲突任务）→ 获准；系统状态迁移至跟随态；拒绝则回统一 reason</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5 委派</td>
+<td>平台 → 小脑</td>
+<td>获准任务指令下发跟随模块</td>
+<td>③ 获准指令（source/token）</td>
+</tr>
+<tr>
+<td>6 技能执行</td>
+<td>小脑</td>
+<td>跟随 FSM 启动：检测锁定目标（消费本子系统融合感知——感知视觉，非大脑交互视觉；数据由平台预处理就绪供给）→ 控制律输出速度 → 汇入运控控制权仲裁 → 关节执行</td>
+<td>—</td>
+</tr>
+<tr>
+<td>7 状态回灌</td>
+<td>小脑 → 平台</td>
+<td>跟随/运控域状态机持续上报</td>
+<td>④ 执行状态流</td>
+</tr>
+<tr>
+<td>8 对外呈现与反馈</td>
+<td>平台</td>
+<td>状态聚合广播；本体 APP 镜像到 App/云，TTS/灯效播报「好的，跟你走」；全局状态反馈给大脑</td>
+<td>⑤ 状态/结果 → 外部与大脑</td>
+</tr>
+<tr>
+<td>9 记忆更新</td>
+<td>大脑</td>
+<td>执行结果写入会话/任务记忆（断点可续）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>全程</td>
+<td>平台·安全</td>
+<td>低电/跌倒/失联任一触发 → 门控拒绝新任务或急停保护姿态，横向生效</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>结论：三个子系统的职责在流程中按「理解→治理→执行→反馈」串联，任一步只有一个子系统为责任方，边界可判定（对照 §3.2.4 三问）。</p>
+<hr />
+<h2 id="3-8-巴展场景业务流分析和模块间接口">3.8 巴展场景业务流分析和模块间接口</h2>
+<p>本节以<strong>巴展（展会现场演示）场景</strong>为对象做端到端业务流分析：把 §3.6 的接口面放进一个多阶段、带循环的长流程场景中走查，验证「模块划分 + 接口清单」在真实业务下的完备性。画法沿用 §3.6 约定——每条边标注：接口名、Topic/Service、关键入出参（仅关键项）；接口一律取自表 3-2（§3.6.4）/ 表 3-3（§3.6.5），<strong>本节不新增任何接口</strong>。</p>
+<p><strong>总调用序（巴展场景通则）</strong>：观众 → 大脑（听懂/认出/想清楚）→ 软件平台（task 调度框架仲裁下发）→ 小脑（运动执行）＋ 屏幕表情 ＋ 灯带 → 本体呈现；执行状态与仲裁结果全程回灌大脑。</p>
+<p><strong>场景实体与权威模块的关系</strong>：场景分析按业务视角组织模块，其中若干实体是 §3.2.1 权威清单 16 模块的<strong>场景子能力或归并视图</strong>，映射见表 3-4——模块划分的权威口径仍以 §3.2.1 为准，场景级新增能力（领路/运镜/信标锁定/讲解）的正式模块化立项见 OP-ARCH-07。</p>
+<p>表 3-4 巴展场景实体 → §3.2.1 权威模块映射（子系统列 rowspan 合并，内嵌 HTML 表格——同表 3-1 做法）</p>
+<div class="tbl-wrap"><table>
+  <thead>
+    <tr><th>子系统</th><th>场景实体</th><th>权威模块映射与说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td rowspan="7">大脑</td><td>语音唤醒和语音识别</td><td>权威模块同名（音频前端内嵌，EV-T1P-53）；场景 A 仅用其<b>唤醒+ASR</b>——TTS 合成链不参与，播报全部走讲解模块预置音频（要点⑦）</td></tr>
+    <tr><td>人脸识别</td><td>视觉识别（交互视觉）的场景子能力：VIP 人脸库比对命中；对标 T1 Agent NPU face 模型 + greeting_state 迎宾触发链〔EV-T1P-67〕</td></tr>
+    <tr><td>信标锁定</td><td><b>产品新增</b>（OP-ARCH-07）：锁定观众手持信标以确定目标观众，交视觉识别提取特征；信标形态（视觉标签/UWB）待选型</td></tr>
+    <tr><td>视觉识别</td><td>权威模块同名（交互视觉：认人/特征/上下文，EV-T1P-61）</td></tr>
+    <tr><td>意图识别</td><td>权威模块同名（本地 NLU + 云端 LLM 两级仲裁，EV-T1P-62）</td></tr>
+    <tr><td>任务规划</td><td>权威「长程任务规划」的场景简称——巴展场景为多阶段长程任务（迎宾→领路→讲解→返回循环），<b>规划产任务序列、逐段下发</b></td></tr>
+    <tr><td>讲解模块</td><td><b>产品新增</b>（OP-ARCH-07）：<b>预置固定话术与讲解语音</b>（音频库，按音频 ID 经 <code>audio/play_audio_file</code> 播放——对标 T1 PlayAudioFile ★ 与固定话术本地直答〔EV-T1P-62〕）；手势语义对标 PlayAnimation（1=问候/60=说话动作）〔EV-T1P-67〕</td></tr>
+    <tr><td rowspan="5">小脑</td><td>运控</td><td>权威模块同名</td></tr>
+    <tr><td>导航</td><td>权威模块同名；<b>内置实时避障</b>＝nav2 规划级避障（§3.10.2 注记 5），消费 ToF 点云绕障，不依赖安全模块</td></tr>
+    <tr><td>领路</td><td><b>产品新增技能</b>（OP-ARCH-07）：T1 无领路任务面（FollowTaskCtrl 8 型/ControlTask 13 型均无，A §5.2）；沿「导航+跟随」组合——领路编排导航目标，回看观众防掉队</td></tr>
+    <tr><td>运镜</td><td><b>产品新增</b>（OP-ARCH-07）：相机指向随动（servo 相机抬升实现；§3.10.2 注记 5 横切消费方之一）；<b>场景 A 不参与</b>（无运镜需求，预留后续巴展场景使用）</td></tr>
+    <tr><td>跟随（含 ReID）</td><td>权威「跟随」+「融合感知」person_track（检测+ReID）的场景归并视图：本场景用其<b>召唤/人脸靠近</b>与领路中观众回看能力</td></tr>
+    <tr><td rowspan="5">软件平台</td><td>task 调度框架与状态机</td><td>权威「task 调度框架与状态管理」（task_engine 仲裁 + sm 门控）</td></tr>
+    <tr><td>传感器数据预处理</td><td>权威模块同名（相机/ToF/伺服机构等数据就绪与设备控制面）</td></tr>
+    <tr><td>推理框架</td><td>权威模块同名——承载层，图中以注记示意、不作为业务通信实体（同 §3.6.1 约定）</td></tr>
+    <tr><td>安全模块（实时感知障碍物和危险）</td><td>权威「安全模块」+ 小脑「实时避障」的场景归并视图：obstacle_check 服务由实时避障承接（表 3-3），变形前净空确认经此入口</td></tr>
+    <tr><td>本体 APP（灯带/屏幕表情/音量控制/遥操/日志查询）</td><td>权威「本体 APP（含交互服务）」：lumina 灯带/display_ui 表情/音量控制（get·set_volume 与 get·set_mute 四口合一行为组，表 3-3）/app_proxy 遥操接入；日志查询走运维链（EV-T1P-66），本场景不展开</td></tr>
+  </tbody>
+</table></div>
+<h3 id="3-8-1-巴展场景-A-主动迎宾-领路-站立讲解-业务流分析和模块间接口">3.8.1 巴展场景 A：主动迎宾、领路、站立讲解（业务流分析和模块间接口）</h3>
+<p><strong>场景描述</strong>（阶段编号 A0~A4，A4 后回到 A0 循环）：</p>
+<ul>
+<li><strong>A0 待机迎宾</strong>：四足狗<strong>双足站立</strong>于展台入口，等待触发。触发为两条路径<strong>或门</strong>：① 观众说出唤醒词「你好，Collie」（语音唤醒）；② 观众靠近时，对人脸识别并与本体内<strong>预设 VIP 人脸库</strong>比对命中（主动人脸识别）。</li>
+<li><strong>A1 迎宾靠近与问候</strong>：唤醒后<strong>主动靠近观众</strong>、正面朝向观众，打招呼并主动询问「要不要带您去具身科技展台」。语音路径下经<strong>信标锁定</strong>（观众手持信标）确定目标观众，再由视觉识别提取观众特征。</li>
+<li><strong>A2 确认与领路</strong>：得到观众确认后，从双足<strong>变形为四足</strong>，开启领路模式带观众前往「具身科技展台」。领路依赖导航（导航向运控发布速度指令，从 A 点走到 B 点），过程中回看观众防止掉队。</li>
+<li><strong>A3 到达与站立讲解</strong>：到达后从四足<strong>变形为双足</strong>、正面朝向观众，讲解展台内容，手部搭配简单讲解动作；期间可回答观众提问。</li>
+<li><strong>A4 送别与返回循环（三步）</strong>：讲解完观众无进一步问题（Q&amp;A 空闲超时/观众离开），依次执行三步——① 变形为四足；② 导航返回展台入口（无观众领带，不经领路，TE 直调导航）；③ 变形为双足站立——随后回到 A0 循环等待迎宾。</li>
+</ul>
+<p><strong>前置条件</strong>：场馆地图开机已加载（<code>/robot/navi/load_map</code>，非业务流）；VIP 人脸库预设完成；语音路径观众手持信标；<strong>讲解模块内置预置固定话术与讲解语音音频库</strong>（按音频 ID 播放，见要点⑦）。<strong>机型口径</strong>（2026-11-19 产品定义确认）：本产品支持<strong>双足站立＋四足↔双足变形</strong>——双足形态下<strong>前两腿转为双臂、后两腿站立承重</strong>，场景 A 的双足环节与讲解手势（双臂执行）即按此口径（README §3.3 A-2 已修订，OP-ARCH-07② 已裁决）。</p>
+<h4 id="3-8-1-1-流程图">3.8.1.1 流程图</h4>
+<p>图 3-7 场景 A 关键业务路径流程图（只画关键路径，备选分支与节拍细节见图 3-8；<strong>每边标签＝【调用阶段】＋接口全称〔含 <code>/robot/</code> 前缀〕＋Topic/Service 与关键参数</strong>；实线边均标注表 3-2/3-3 既有接口，虚线边为进程内步骤或状态反馈——状态反馈边标注接口、纯进程内边无外显接口，同 §3.6 口径；子系统名称加粗放大）</p>
+<div class="diagram"><div class="mermaid">flowchart TB
+    U(["观众"])
+    subgraph BRAIN["大脑 Agent 子系统"]
+        VOICE["语音唤醒和语音识别〔唤醒+ASR，不含 TTS〕"]
+        FACE["人脸识别〔VIP 人脸库比对〕"]
+        BEACON["信标锁定〔观众手持信标→锁定目标观众〕"]
+        VIS["视觉识别〔提取观众特征〕"]
+        INT["意图识别〔本地 NLU / 云端 LLM〕"]
+        PLAN["任务规划〔迎宾→领路→讲解→返回，规划产任务序列、逐段下发〕"]
+        EXP["讲解模块〔预置固定话术与讲解语音〕"]
+    end
+    subgraph PLAT["软件平台子系统"]
+        TE["task 调度框架与状态机〔task_engine 仲裁+sm 门控〕"]
+        HAL["传感器数据预处理〔相机/ToF〕"]
+        SAFE["安全模块〔实时感知障碍物和危险〕"]
+        APP["本体 APP〔灯带/屏幕表情/音量控制/遥操/日志查询〕"]
+    end
+    subgraph CERB["小脑子系统"]
+        FLW["跟随（ReID）〔召唤/人脸靠近·观众回看〕"]
+        LEAD["领路〔编排导航目标+防掉队〕"]
+        NAV["导航〔内置实时避障：ToF 绕障〕"]
+        MC["运控〔动作/输入源仲裁+WBC〕"]
+    end
+
+    U --&gt;|"【A0 语音唤醒】唤醒词「你好，Collie」"| VOICE
+    U --&gt;|"【A0 VIP 人脸唤醒】观众走近展台"| FACE
+    HAL --&gt;|"【A0 VIP 人脸唤醒】/robot/sensor/camera/head_stereo_left（Topic：Image，10fps）"| FACE
+    HAL --&gt;|"【A0 信标锁定】/robot/sensor/camera/head_stereo_left（Topic）"| BEACON
+    INT -.-&gt;|"【A0 信标触发】唤醒后触发目标观众锁定（进程内）"| BEACON
+    BEACON -.-&gt;|"【A0 信标锁定】锁定信标→目标观众（进程内）"| VIS
+    VIS -.-&gt;|"【A0 视觉特征】观众特征（进程内）——领路目标关联"| PLAN
+    VOICE --&gt;|"【A0 语音唤醒】/robot/agent/asr_result（Topic：text，is_final=true，confidence）"| INT
+    FACE --&gt;|"【A0 VIP 人脸唤醒】/robot/agent/face_info（Topic：face_id——VIP 库命中〔EV-T1P-67〕）"| INT
+    INT --&gt;|"【A0~A4 意图广播】/robot/agent/semantic_intent（Topic：type/value——greeting·confirmation 等）"| PLAN
+    PLAN --&gt;|"【A1~A4 任务下发】/robot/task/request（Service：source_type=AGENT，function_name=迎宾/领路/讲解/返回）"| TE
+    TE --&gt;|"【A1~A4 仲裁回执】/robot/task/request 响应（Service resp：arbitration_result+reason+token——仲裁结果必回大脑）"| PLAN
+    TE -.-&gt;|"【全程 状态可见】/robot/interaction/state（Topic：task_state/form_state——任务状态实时回大脑）"| PLAN
+    HAL --&gt;|"【A1~A4 受理门控】/robot/sensor/bms/state（Topic：remaining_capacity_percentage——受理电量门控）"| TE
+    TE --&gt;|"【A1 靠近】/robot/follow/task_ctrl（Service：type=2 召唤〔人脸路径 type=3〕，trigger=启动）"| FLW
+    TE --&gt;|"【A1 靠近】/robot/follow/set_follow_task_biped（Service：双足靠近参数：目标距离/朝向保持）"| FLW
+    FLW --&gt;|"【A1 靠近】/robot/mc/set_input_source（Service：name=follow，priority，timeout）"| MC
+    FLW --&gt;|"【A1 靠近】/robot/mc/locomotion/velocity（Topic：source=follow，v/ω，≥10Hz 续租）"| MC
+    FLW --&gt;|"【A1 靠近】/robot/follow/state（Topic：state=2 跟随中→到位即正对观众）"| TE
+    TE --&gt;|"【A2/A3/A4 变形前】/robot/perception/obstacle_check（Service：direction 全向位掩码/form；resp：has_obstacle——变形净空确认）"| SAFE
+    TE --&gt;|"【A2/A4 变形】/robot/mc/set_action（Service：action=变形 双足↔四足〔10-22 段〕，source=task_engine——净空确认后执行）"| MC
+    TE --&gt;|"【A2 领路】获准任务 · /robot/mc/set_action（action=领路，source=task_engine——触发小脑领路域；与第 5 章图 5-1「获准任务/取消 · set_action」合并边同构）"| LEAD
+    LEAD --&gt;|"【A2 领路】/robot/navi/set_task（Service：action=0 开始，goal=具身科技展台 PoseStamped 含终点朝向）"| NAV
+    TE --&gt;|"【A4 导航返程】/robot/navi/set_task（Service：action=0 开始，goal=展台入口——无观众领带，不经领路）"| NAV
+    NAV --&gt;|"【A2/A4 行走】/robot/mc/set_input_source（Service：name=navi〔对标 T1 pnc 源〕）"| MC
+    NAV --&gt;|"【A2/A4 行走】/robot/mc/locomotion/velocity（Topic：source=navi——内置实时避障绕障，不依赖安全模块）"| MC
+    HAL --&gt;|"【A2/A4 避障输入】/robot/sensor/tof/*/points（Topic：5 路，20Hz）"| NAV
+    FLW --&gt;|"【A2 领路】/robot/perception/follow_candidates（Topic：归一化目标框——回看观众，掉队则暂停等待）"| LEAD
+    NAV --&gt;|"【A2/A4 行走】/robot/navi/state（Topic：state=2 导航中→4 到达）"| TE
+    MC --&gt;|"【全程 状态】/robot/mc/common/state（Topic：action_info/form_state，50Hz）"| TE
+    TE --&gt;|"【A1/A3/A4 播报】/robot/audio/play_audio_file（Service：file.file_name=音频 ID〔预置固定话术/讲解语音〕——讲解模块承接声音播报；resp：CommonResponse）"| EXP
+    TE --&gt;|"【A3 讲解手势】/robot/mc/set_preset_motion（Service：area=1+2 手部位掩码〔双手〕，motion=讲解手势，interrupt=true）"| MC
+    TE --&gt;|"【A1/A3 表情】/robot/display/play_emotion（Service：emotion_ids/priority——迎宾/讲解表情）"| APP
+    TE --&gt;|"【A1 迎宾灯效】/robot/led/command（Service：led_strip_mode——舞台节拍点显式灯语）"| APP
+    TE --&gt;|"【A1 场景音量】/robot/audio/set_volume（Service：audio_volume=场景音量档；与 get_volume/get·set_mute 四口合一行为组）"| APP
+    TE --&gt;|"【全程 灯语联动】/robot/interaction/state（Topic：task_state → 任务态灯语联动）"| APP
+    EXP --&gt;|"【A1/A3/A4 播报灯语】/robot/interaction/tts_status（Topic：trace_id/播放状态 → 播报灯语联动〔EV-T1P-64〕）"| APP
+
+    style BRAIN font-weight:bold
+    style PLAT font-weight:bold
+    style CERB font-weight:bold
+</div></div>
+<h4 id="3-8-1-2-时序图">3.8.1.2 时序图</h4>
+<p>图 3-8 场景 A 完整业务时序图（阶段 A0~A4 全流；<strong>每条消息标注【调用阶段】＋接口全称〔含 <code>/robot/</code> 前缀〕＋关键参数</strong>；「推理框架/OS 基础服务」为承载层以注记示意）</p>
+<div class="diagram"><div class="mermaid">sequenceDiagram
+    autonumber
+    participant U as 观众
+    participant VOICE as 语音唤醒和语音识别〔大脑：唤醒+ASR，不含 TTS〕
+    participant VIS as 人脸识别·信标锁定·视觉识别〔大脑〕
+    participant INT as 意图识别〔大脑：本地 NLU / 云端 LLM〕
+    participant PLAN as 任务规划〔大脑〕
+    participant EXP as 讲解模块〔大脑：预置固定话术与讲解语音〕
+    participant HAL as 传感器数据预处理〔平台〕
+    participant TE as task 调度框架与状态机〔平台〕
+    participant SAFE as 安全模块〔平台〕
+    participant APP as 本体 APP〔平台：灯带/屏幕表情/音量控制〕
+    participant FLW as 跟随（ReID）〔小脑〕
+    participant LEAD as 领路〔小脑〕
+    participant NAV as 导航〔小脑〕
+    participant MC as 运控〔小脑〕
+
+    Note over U,EXP: A0/A1 待机触发与迎宾靠近（大脑感知→平台仲裁→小脑执行）
+    U-&gt;&gt;VOICE: 【A0 语音唤醒】唤醒词「你好，Collie」
+    VOICE-&gt;&gt;INT: 【A0 语音唤醒】/robot/agent/asr_result（Topic：text，is_final=true，confidence）
+    INT-&gt;&gt;VIS: 【A0 信标触发】唤醒后触发信标锁定（进程内）——语音路径目标观众锁定
+    HAL--&gt;&gt;VIS: 【A0 信标锁定】/robot/sensor/camera/head_stereo_left（Topic：Image，10fps）
+    Note over VIS: 信标锁定：锁定观众手持信标→视觉识别提取观众特征〔推理框架 NPU 就地推理〕——领路目标关联
+    alt 视觉触发路径（A0：观众走近，与语音路径或门）
+        HAL--&gt;&gt;VIS: 【A0 VIP 人脸唤醒】/robot/sensor/camera/head_stereo_left（Topic：Image，10fps）
+        Note over VIS: 人脸识别：VIP 人脸库比对
+        VIS-&gt;&gt;INT: 【A0 VIP 人脸唤醒】/robot/agent/face_info（Topic：face_id 命中〔EV-T1P-67〕）
+    end
+    INT-&gt;&gt;PLAN: 【A0 意图】/robot/agent/semantic_intent（Topic：type=greeting，value=迎宾）
+    PLAN-&gt;&gt;TE: 【A1 任务下发】/robot/task/request（Service：source_type=AGENT，function_name=迎宾）
+    TE--&gt;&gt;PLAN: 【A1 仲裁回执】/robot/task/request 响应（arbitration_result=5 成功+token；拒绝则 arbitration_reason）——仲裁结果必回大脑
+    Note over TE: 进程内：状态机门控（/robot/system/state）+ 规则仲裁（/robot/sensor/bms/state 电量门控）
+    TE-&gt;&gt;APP: 【A1 场景音量】/robot/audio/set_volume（Service：audio_volume=迎宾场景音量档〔四口合一行为组〕）
+    TE-&gt;&gt;FLW: 【A1 靠近】/robot/follow/task_ctrl（Service：type=2 召唤〔人脸路径 type=3〕，trigger=启动）
+    TE-&gt;&gt;FLW: 【A1 靠近】/robot/follow/set_follow_task_biped（Service：双足靠近参数：目标距离/朝向保持）
+    HAL--&gt;&gt;FLW: 【A1 靠近】/robot/sensor/camera/head_stereo_left（Topic：ReID 目标跟踪输入）
+    FLW-&gt;&gt;MC: 【A1 靠近】/robot/mc/set_input_source（Service：name=follow，priority=40，timeout=1000ms）
+    loop 【A1 靠近】迎宾靠近（双足行走至观众面前）
+        FLW-&gt;&gt;MC: 【A1 靠近】/robot/mc/locomotion/velocity（Topic：source=follow，v/ω，≥10Hz 续租）
+    end
+    FLW--&gt;&gt;TE: 【A1 靠近】/robot/follow/state（Topic：state=2 跟随中→到位；到位即正对观众）
+    TE-&gt;&gt;EXP: 【A1 问候】/robot/audio/play_audio_file（Service：file.file_name=问候+「要不要带您去具身科技展台？」音频 ID）
+    EXP--&gt;&gt;TE: 【A1 问候】/robot/audio/play_audio_file 响应（CommonResponse：受理）
+    Note over EXP,APP: 预置音频播报（对标 T1 audio_pre_cache 预缓存直答〔EV-T1P-62〕）；语音模块仅唤醒+ASR，不经 TTS 合成链
+    EXP--&gt;&gt;APP: 【A1 问候】/robot/interaction/tts_status（Topic：trace_id/播放状态 → 播报灯语联动〔EV-T1P-64〕）
+    TE-&gt;&gt;APP: 【A1/A3 表情】/robot/display/play_emotion（Service：emotion_ids=迎宾表情）
+    TE-&gt;&gt;APP: 【A1 迎宾灯效】/robot/led/command（Service：led_strip_mode——舞台节拍点显式灯语；常规灯语走联动）
+    TE--&gt;&gt;APP: 【全程 灯语联动】/robot/interaction/state（Topic：task_state → 任务态灯语联动）
+
+    Note over U,LEAD: A2 观众确认与领路（变形前安全确认→四足领路）
+    U-&gt;&gt;VOICE: 【A2 确认】「好，带我去吧」
+    VOICE-&gt;&gt;INT: 【A2 确认】/robot/agent/asr_result（Topic：text，is_final=true）
+    INT-&gt;&gt;PLAN: 【A2 确认】/robot/agent/semantic_intent（Topic：type=confirmation，value=yes）
+    PLAN-&gt;&gt;TE: 【A2 任务下发】/robot/task/request（Service：function_name=领路，goal=具身科技展台）
+    TE--&gt;&gt;PLAN: 【A2 仲裁回执】/robot/task/request 响应（arbitration_result+token）
+    TE-&gt;&gt;SAFE: 【A2 变形前】/robot/perception/obstacle_check（Service：direction=全向位掩码，form=双足）
+    SAFE--&gt;&gt;TE: 【A2 变形前】/robot/perception/obstacle_check 响应（has_obstacle=false——四周净空）
+    TE-&gt;&gt;MC: 【A2 变形】/robot/mc/set_action（Service：action=变形·双足→四足〔10-22 段〕，source=task_engine）
+    MC--&gt;&gt;TE: 【A2 变形】/robot/mc/set_action 响应（task_id，state=SUCCESS——受理≠完成）
+    MC--&gt;&gt;TE: 【A2 变形】/robot/mc/common/state（Topic：form_state=四足，变形完成）
+    TE-&gt;&gt;LEAD: 【A2 领路】获准任务 · /robot/mc/set_action（action=领路，source=task_engine）〔与第 5 章图 5-1 合并边同构〕
+    LEAD-&gt;&gt;NAV: 【A2 领路】/robot/navi/set_task（Service：action=0 开始，goal=具身科技展台 PoseStamped〔含终点朝向〕）
+    NAV-&gt;&gt;MC: 【A2/A4 行走】/robot/mc/set_input_source（Service：name=navi〔对标 T1 pnc 源〕）
+    loop 【A2 领路】领路行走（导航中）
+        HAL--&gt;&gt;NAV: 【A2 领路】/robot/sensor/tof/*/points（Topic：20Hz——导航内置实时避障绕障，不依赖安全模块）
+        NAV-&gt;&gt;MC: 【A2 领路】/robot/mc/locomotion/velocity（Topic：source=navi，v/ω）
+        FLW--&gt;&gt;LEAD: 【A2 领路】/robot/perception/follow_candidates（Topic：归一化框——观众回看）
+        opt 观众掉队
+            LEAD-&gt;&gt;NAV: 【A2 领路】/robot/navi/set_task（Service：action=1 暂停 → 0 继续——等待观众跟上）
+        end
+        NAV--&gt;&gt;TE: 【A2/A4 行走】/robot/navi/state（Topic：state=2 导航中，2s 周期）
+        TE--&gt;&gt;PLAN: 【全程 状态可见】/robot/interaction/state（Topic：task_state=领路中——大脑实时可见）
+    end
+    NAV--&gt;&gt;TE: 【A2/A4 行走】/robot/navi/state（Topic：state=4 到达）
+
+    Note over U,APP: A3 变形双足与站立讲解（讲解三路输出：预置语音/表情/手势）
+    TE-&gt;&gt;SAFE: 【A3 变形前】/robot/perception/obstacle_check（Service：form=四足）
+    SAFE--&gt;&gt;TE: 【A3 变形前】/robot/perception/obstacle_check 响应（has_obstacle=false）
+    TE-&gt;&gt;MC: 【A3 变形】/robot/mc/set_action（Service：action=变形·四足→双足〔10-22 段〕→ 201 双足站立）
+    MC--&gt;&gt;TE: 【A3 变形】/robot/mc/common/state（Topic：form_state=双足，posture 就绪——终点朝向已由 navi goal 保证正对观众）
+    PLAN-&gt;&gt;TE: 【A3 任务下发】/robot/task/request（Service：function_name=讲解）
+    TE--&gt;&gt;PLAN: 【A3 仲裁回执】/robot/task/request 响应（arbitration_result+token）
+    loop 【A3 讲解】讲解段落（三路输出：预置语音/表情/手势）
+        TE-&gt;&gt;EXP: 【A3 讲解】/robot/audio/play_audio_file（Service：file.file_name=讲解段落 N 音频 ID）
+        EXP--&gt;&gt;TE: 【A3 讲解】/robot/audio/play_audio_file 响应（CommonResponse：受理）
+        Note over EXP: 段落播放完成（tts_status 状态机）→ 下一段
+        EXP--&gt;&gt;APP: 【A3 讲解】/robot/interaction/tts_status（Topic：播放状态 → 播报灯语联动〔EV-T1P-64〕）
+        TE-&gt;&gt;MC: 【A3 讲解手势】/robot/mc/set_preset_motion（Service：area=1+2 手部位掩码〔双手〕，motion=讲解手势，interrupt=true）
+        TE-&gt;&gt;APP: 【A3 讲解表情】/robot/display/play_emotion（Service：emotion_ids=讲解表情）
+    end
+    opt Q&amp;A（可多轮）
+        U-&gt;&gt;VOICE: 【A3 提问】提问
+        VOICE-&gt;&gt;INT: 【A3 提问】/robot/agent/asr_result（Topic：text）
+        INT-&gt;&gt;PLAN: 【A3 提问】/robot/agent/semantic_intent（Topic：type=question）
+        Note over PLAN,EXP: 云端 LLM 优先、2s 超时本地接管〔EV-T1P-62〕→ 讲解模块选定回答音频（预置答案库）
+        TE-&gt;&gt;EXP: 【A3 回答】/robot/audio/play_audio_file（Service：file.file_name=回答音频 ID）
+    end
+
+    Note over U,MC: A4 送别与返回循环（三步：变形四足 → 导航返回 → 变形双足）
+    INT-&gt;&gt;PLAN: 【A4 结束判定】/robot/agent/semantic_intent（Topic：type=讲解结束〔Q&amp;A 空闲超时/观众离开〕）
+    PLAN-&gt;&gt;TE: 【A4 任务下发】/robot/task/request（Service：function_name=返回迎宾位，goal=展台入口）
+    TE--&gt;&gt;PLAN: 【A4 仲裁回执】/robot/task/request 响应（arbitration_result+token）
+    TE-&gt;&gt;SAFE: 【A4 变形前】/robot/perception/obstacle_check（Service：变形前净空确认）
+    SAFE--&gt;&gt;TE: 【A4 变形前】/robot/perception/obstacle_check 响应（has_obstacle=false）
+    TE-&gt;&gt;MC: 【A4 变形】/robot/mc/set_action（Service：action=变形·双足→四足，source=task_engine）
+    MC--&gt;&gt;TE: 【A4 变形】/robot/mc/common/state（Topic：form_state=四足，变形完成）
+    TE-&gt;&gt;NAV: 【A4 导航返程】/robot/navi/set_task（Service：action=0 开始，goal=展台入口——不经领路）
+    loop 【A4 导航返程】返程行走
+        NAV-&gt;&gt;MC: 【A4 导航返程】/robot/mc/locomotion/velocity（Topic：source=navi，v/ω）
+    end
+    NAV--&gt;&gt;TE: 【A4 导航返程】/robot/navi/state（Topic：state=4 到达展台入口）
+    TE-&gt;&gt;SAFE: 【A4 变形前】/robot/perception/obstacle_check（Service：净空确认）
+    SAFE--&gt;&gt;TE: 【A4 变形前】/robot/perception/obstacle_check 响应（has_obstacle=false）
+    TE-&gt;&gt;MC: 【A4 变形】/robot/mc/set_action（Service：action=变形·四足→双足 → 201 双足站立）
+    MC--&gt;&gt;TE: 【A4 变形】/robot/mc/common/state（Topic：form_state=双足，站立就绪）
+    TE-&gt;&gt;EXP: 【A4 送别】/robot/audio/play_audio_file（Service：file.file_name=送别话术音频 ID）
+    EXP--&gt;&gt;APP: 【A4 送别】/robot/interaction/tts_status（Topic：播放状态 → 播报灯语联动）
+    Note over U,MC: 循环：回到待机迎宾位（双足站立@展台入口，等待下一轮触发）
+</div></div>
+<p><strong>要点与边界注记</strong>（对应图 3-7/3-8 两图）：</p>
+<ol>
+<li><strong>触发双路径</strong>：语音（唤醒词——产品自定义，唤醒链对标 T1 讯飞 VTN〔EV-T1P-53〕）与人脸（VIP 库命中——对标 T1 迎宾链 face_info+greeting_state/FaceGreet〔EV-T1P-67〕）；本产品以 <code>face_info</code>＋<code>semantic_intent</code> 表达触发，无需新增接口。</li>
+<li><strong>领路为产品新增技能</strong>：T1 任务面无领路（FollowTaskCtrl 8 型/ControlTask 13 型，A §5.2）；领路＝导航编排（<code>navi/set_task</code>）＋观众回看（<code>follow_candidates</code>）＋掉队暂停；任务下发沿用第 5 章图 5-1「获准任务/取消 · set_action」合并边口径（IF-TS-14/15 双通道），正式定名归 TS/NV 域章节。领路仅去程（A2）使用——A4 导航返程无观众领带，TE 直接 <code>navi/set_task</code> 返回入口（【A4 导航返程】）。</li>
+<li><strong>导航内置实时避障</strong>：领路行走中由导航消费 ToF 点云做规划级绕障，<strong>不依赖安全模块</strong>——与 §3.10.2 注记 5 一致（实时避障的反射层 velocity 改写为横切能力，本场景未触发急停链）。</li>
+<li><strong>变形安全门</strong>：双足↔四足变形（<code>set_action</code> 10-22 段）前必经 <code>obstacle_check</code> 净空确认（<code>form</code> 参与形态联动）——安全模块在场景 A 中仅此参与；机型口径已确认（双足站立＋四足↔双足变形，2026-11-19，OP-ARCH-07② 已裁决）。</li>
+<li><strong>结果反馈与状态可见</strong>：<code>task/request</code> 响应（成功/拒绝+reason）必回大脑——图 3-7 为显式回边（<code>task/request 响应</code>），图 3-8 四处任务请求均带回程响应；运行态经 <code>interaction/state</code>（任务态/形态）与各域状态（<code>navi/state</code>、<code>follow/state</code>、<code>mc/common/state</code>）订阅实时可见——「受理≠完成」以响应+状态流区分。</li>
+<li><strong>灯带两种方式</strong>（沿用 §3.6 口径）：常规＝lumina 常驻只读订阅联动（<code>tts_status</code>/<code>interaction/state</code>〔EV-T1P-64〕）；舞台节拍点＝显式 <code>led/command</code>（本产品场景设计；T1 显式实证仅 UC1 舞蹈）。</li>
+<li><strong>播报与讲解三路输出（语音模块仅唤醒+ASR，不经 TTS 合成链）</strong>：全部声音播报由 TE 调用讲解模块执行——<code>audio/play_audio_file</code>（<code>file.file_name</code>＝预置音频库<strong>音频 ID</strong>；对标 T1 PlayAudioFile ★ 与固定话术本地直答〔EV-T1P-62 的 audio_pre_cache 预缓存形态〕）；讲解另两路：表情（<code>play_emotion</code>）、手势（<code>set_preset_motion</code> 手部位掩码——双臂＝双足形态下前两腿〔A-2〕；对标 T1 PlayAnimation 60=说话动作〔EV-T1P-67〕，优先级阶梯「上肢动作=40」〔EV-T1P-37〕）；播报状态 <code>interaction/tts_status</code> 由讲解模块发布→APP 灯语联动〔EV-T1P-64〕。注：T1 中 PlayAudioFile 服务端为 audio_manager（平台音频栈）——本场景视图由讲解模块承接（预置音频库），服务归属实现待 TS/VI 域定名（OP-ARCH-07①）。</li>
+<li><strong>音量控制与运镜留白</strong>：场景音量经 <code>audio/set_volume</code>（与 get_volume/get·set_mute 四口合一行为组〔表 3-3〕）由 TE 下发本体 APP（A1 设迎宾音量档）；运镜（servo 相机抬升）场景 A 不参与——预留后续巴展场景（OP-ARCH-07①）。</li>
+</ol>
+<h4 id="3-8-1-3-模块间的接口清单">3.8.1.3 模块间的接口清单</h4>
+<p><strong>本场景用到的接口清单</strong>（全部可在表 3-2〔§3.6.4〕/ 表 3-3〔§3.6.5〕找到，无新增；图内接口名均为<strong>全称</strong>〔含 <code>/robot/</code> 前缀〕，每条边/消息另标<strong>【调用阶段】</strong>；参数语义与枚举值沿用 T1 Pro 实测口径，场景取值以〔〕标注；<strong>首列 ◎ 圆标＝跨子系统边界接口</strong>——共 14 项，详细数据结构见 §3.8.1.4，子系统内部接口无圆标。圆标选用 ◎ 的原因：避开表 3-2/3-3「T1 对标名」列已占用的 ★（＝T1 SDK 官方面）与表 3-1 参与度列已占用的 ●/○（＝主参与/辅助），◎ 在全文档无二义（曾用 ★ 星标，V0.38 改 ◎；亦曾用「加粗＋★」双标记，因部分渲染器下 <code>★**加粗**</code> 相邻会显形失效——圆标行接口名为纯文本，仅证据档标签加粗）；<strong>首列尾标证据两档</strong>：<strong>〔参考 T1〕</strong>＝接口名、参数与枚举语义均出自 T1 实测，<strong>〔参考 T1＋推断〕</strong>＝接口出自 T1 但场景取值/承接方/任务面为本产品合理推断——推断点已在行内注明〔semantic_intent 的 type 扩展、tts_status 发布方=讲解模块、task/request 的 function_name 任务面（领路/讲解/返回，T1 无领路）、set_follow_task_biped 字段名建议值、set_action 领路获准同面、play_audio_file 讲解模块承接〕）——按 Topic / Service 分列两表（Topic 为同负载多播：入参即出参负载，出参列标注场景订阅方与判定用途）：</p>
+<p>表 3-5 场景 A Topic 接口使用清单（13 项，出自表 3-2）</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>接口（产品命名）</th>
+<th>使用阶段</th>
+<th>场景用途</th>
+<th>入参（发布方填写——逐参数一行）</th>
+<th>出参（订阅方读取——同负载）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/robot/agent/asr_result <strong>〔参考 T1〕</strong></td>
+<td>A1/A2/A3</td>
+<td>语音输入→文本（唤醒词/确认语/提问）</td>
+<td><code>header</code>（消息头：时间戳，多模态对齐用）<br><code>text</code>（识别文本原文——唤醒词「你好，Collie」、确认语「好，带我去吧」、观众提问）<br><code>event_id</code>（语音事件标识——同一次语音的流式帧关联）<br><code>is_final</code>（是否终稿：false=流式中间结果、true=整句完成——场景仅消费 true 触发意图）<br><code>confidence</code>（识别置信度——低置信转云端/二次确认）<br><code>language</code>（语种）</td>
+<td>同负载；订阅方：意图识别（触发意图链）</td>
+</tr>
+<tr>
+<td>/robot/agent/semantic_intent <strong>〔参考 T1＋推断〕</strong></td>
+<td>A1~A4</td>
+<td>结构化意图（大脑→平台单向广播）</td>
+<td><code>header</code>（消息头）<br><code>type</code>（意图类型——greeting 迎宾触发/confirmation 确认/question 提问/讲解结束）<br><code>value</code>（意图取值——confirmation 取 yes/no；greeting 附迎宾上下文）</td>
+<td>同负载；订阅方：任务规划（汇总后经 task/request 下发）</td>
+</tr>
+<tr>
+<td>/robot/agent/face_info <strong>〔参考 T1〕</strong></td>
+<td>A1 视觉触发</td>
+<td>人脸识别输出（VIP 命中触发迎宾）</td>
+<td><code>header</code>（消息头）<br><code>list[]</code>（人脸信息列表——<code>face_id</code>：人脸档案 ID，与预设 VIP 人脸库比对命中即触发迎宾〔EV-T1P-67〕）</td>
+<td>同负载；订阅方：意图识别（视觉路径触发源）</td>
+</tr>
+<tr>
+<td>◎/robot/interaction/state <strong>〔参考 T1〕</strong></td>
+<td>全程</td>
+<td>交互长任务状态（任务/形态/上肢）</td>
+<td><code>header</code>（消息头）<br><code>interaction_id</code>（长任务实例标识）<br><code>task_state</code>（任务类型码 1-17——迎宾/领路/讲解各阶段任务态）<br><code>form_state</code>（形态四足/双足）<br><code>mp_state</code>（上肢动作态——讲解手势进行中）<br><code>action_info</code>（当前动作摘要）<br><code>mode</code>（0 室内/1 户外/2 超能）<br><code>mode_speed</code>（模式速度档）</td>
+<td>同负载；订阅方：任务规划〔实时状态可见〕、本体 APP（任务态灯语联动）</td>
+</tr>
+<tr>
+<td>◎/robot/interaction/tts_status <strong>〔参考 T1＋推断〕</strong></td>
+<td>A1/A3/A4</td>
+<td>播报状态（讲解模块播报→灯语联动）</td>
+<td><code>text</code>（播报文本回显）<br><code>priority</code>（播报优先级）<br><code>trace_id</code>（播报实例标识——打断/完成按其对齐）<br><code>tts_status</code>（播放中/完成/失败）<br><code>domain</code>（播报域）<br><code>error_message</code>（失败原因）</td>
+<td>同负载；订阅方：本体 APP（播报灯语联动〔EV-T1P-64〕）</td>
+</tr>
+<tr>
+<td>◎/robot/sensor/camera/head_stereo_left <strong>〔参考 T1〕</strong></td>
+<td>A1/A2</td>
+<td>头部双目左目图像（视觉输入源）</td>
+<td><code>header</code>（采集时间戳）<br>图像数据（sensor_msgs/Image——2592×1944，10fps，iceoryx 板内）</td>
+<td>同负载；订阅方：人脸识别/信标锁定/视觉识别、跟随（ReID 目标跟踪）</td>
+</tr>
+<tr>
+<td>◎/robot/sensor/tof/*/points <strong>〔参考 T1〕</strong></td>
+<td>A2 领路</td>
+<td>5 路 ToF 点云（导航避障输入）</td>
+<td><code>header</code>（采集时间戳/传感器坐标系）<br>点云数据（sensor_msgs/PointCloud2 组织点云——5 路 20Hz，iceoryx）</td>
+<td>同负载；订阅方：导航（内置实时避障绕障，不依赖安全模块）</td>
+</tr>
+<tr>
+<td>/robot/sensor/bms/state <strong>〔参考 T1〕</strong></td>
+<td>受理门控</td>
+<td>电源数据（任务受理电量门控）</td>
+<td><code>header</code>（消息头）<br><code>remaining_capacity_percentage</code>（剩余电量百分比——TE 规则受理阈值判据；电压/电流/温度等其余电源字段见表 3-2）</td>
+<td>同负载；订阅方：task 调度框架与状态机（电量门控）</td>
+</tr>
+<tr>
+<td>◎/robot/mc/common/state <strong>〔参考 T1〕</strong></td>
+<td>全程</td>
+<td>运控全量状态（权威状态源，50Hz）</td>
+<td><code>header</code>（消息头）<br><code>action_info</code>（当前动作：current_action/source/status/switch_ready——受理≠完成的完成侧判定）<br><code>form_state</code>（形态——变形完成判定）<br><code>posture</code>（姿态 roll/pitch/yaw）<br><code>is_moving</code>（是否运动中）<br><code>input_source</code>（当前持权输入源 name/priority/timeout）<br><code>task_info</code>（task_id——与受理动作关联）<br><code>runtime_model</code>/<code>motion_status</code>/<code>fsm_state</code>（运行时模型/运动状态/内部状态机，详见表 3-2）</td>
+<td>同负载；订阅方：task 调度框架与状态机（变形完成/站立就绪判定→触发下一步）</td>
+</tr>
+<tr>
+<td>◎/robot/follow/state <strong>〔参考 T1〕</strong></td>
+<td>A1</td>
+<td>跟随任务状态</td>
+<td><code>state</code>（0 空闲/1 未发现/2 跟随中/3 丢失/4 跟错/5 太远/6 太近/7 受阻——场景消费 2 跟随中→到位即停）</td>
+<td>同负载；订阅方：task 调度框架与状态机（靠近到位判定）</td>
+</tr>
+<tr>
+<td>/robot/perception/follow_candidates <strong>〔参考 T1〕</strong></td>
+<td>A2 领路</td>
+<td>跟随候选目标（观众回看）</td>
+<td><code>header</code>（消息头）<br><code>perception_list[]</code>（候选列表，逐成员如下）<br><code>id</code>（目标标识——与信标锁定目标关联）<br><code>x,y</code>（归一化左上角坐标）<br><code>w,h</code>（归一化宽高）<br>（<strong>归一化坐标非米制</strong>）</td>
+<td>同负载；订阅方：领路（观众掉队判定——丢失→navi/set_task 暂停等待）</td>
+</tr>
+<tr>
+<td>/robot/mc/locomotion/velocity <strong>〔参考 T1〕</strong></td>
+<td>A1/A2</td>
+<td>走跑速度指令（运动中枢）</td>
+<td><code>source</code>（输入源名——follow 靠近/navi 导航行走〔对标 T1 pnc〕）<br><code>forward_velocity</code>（前向速度 m/s，+前−后）<br><code>lateral_velocity</code>（侧向速度，+左）<br><code>angular_velocity</code>（角速度，+左旋）<br><code>pitch_velocity</code>（俯仰角速度——双足姿态微调）<br><code>level</code>（档位）<br>（≥10Hz 持续发布即续租）</td>
+<td>同负载；消费方：运控（输入源仲裁后执行——发布前须 set_input_source 抢占）</td>
+</tr>
+<tr>
+<td>◎/robot/navi/state <strong>〔参考 T1〕</strong></td>
+<td>A2/A4</td>
+<td>导航任务状态（2s 周期）</td>
+<td><code>state</code>（0 空闲/1 初始化/2 导航中/3 暂停/4 到达/5 失败/6 取消——场景消费 2 导航中、4 到达）<br><code>goal</code>（当前目标 PoseStamped 回显）<br><code>description</code>（状态描述文本）</td>
+<td>同负载；订阅方：task 调度框架与状态机（到达判定→触发下一步）、领路</td>
+</tr>
+</tbody>
+</table></div>
+<p>表 3-6 场景 A Service 接口使用清单（12 项，出自表 3-3）</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>接口（产品命名）</th>
+<th>使用阶段</th>
+<th>场景用途</th>
+<th>入参（Request——逐参数一行）</th>
+<th>出参（Response——逐参数含义）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>◎/robot/task/request（IF-TS-01） <strong>〔参考 T1＋推断〕</strong></td>
+<td>A1/A2/A3/A4</td>
+<td>任务仲裁请求（长任务统一入口；仲裁结果必回大脑）</td>
+<td><code>header</code>（消息头）<br><code>token_common</code>（source 来源＋token 请求凭据——幂等/关联用）<br><code>source_type</code>（请求方类型 0-9——场景取 AGENT〔大脑〕）<br><code>requester_module</code>（请求模块名——任务规划）<br><code>am_mode</code>（仲裁模式：0 按 function_name 任务名/1 按 action 动作）<br><code>function_name</code>（任务名——迎宾/领路/讲解/返回迎宾位）<br><code>request_action_type</code>＋<code>request_action_id</code>（am_mode=1 时的动作类型与 ID）<br><code>scene_tag</code>（场景标签——巴展）<br><code>role_name</code>（角色名——权限判据）</td>
+<td><code>arbitration_result</code>（仲裁结果：0 未知/1 拒绝/2 抢占/3 取消/4 二次确认/5 成功——回大脑）；<code>arbitration_code</code>＋<code>arbitration_reason</code>（结果码 0-66 与原因——拒绝时大脑据此改口/重试）；<code>extra_message</code>（附加信息 JSON）；<code>token</code>（<strong>仲裁层凭据</strong>——后续 task/cancel、task/control 携带以校验任务归属权、防越权；<strong>≠ 执行层任务实例标识 task_id</strong>——task_id 由 mc/域执行器的 CommonTaskResponse 产出，见 mc/set_action 行）</td>
+</tr>
+<tr>
+<td>/robot/mc/set_input_source（IF-TS-11） <strong>〔参考 T1〕</strong></td>
+<td>A1/A2</td>
+<td>抢占速度控制权（velocity 前置）</td>
+<td><code>header</code>（消息头）<br><code>action</code>（源操作：ADD 注册/DELETE 释放——任务收尾显式释放）<br><code>input_source.name</code>（源名——follow 跟随靠近/navi 导航行走）<br><code>input_source.priority</code>（优先级 0-100——高者绝对抢占、同价先入为主）<br><code>input_source.timeout</code>（无续约静默窗口 ms，默认 1000——每帧 velocity 即续租，静默超时＝失联保护性释放）</td>
+<td><code>task_id</code>（操作标识）；<code>state</code>（CommonState——注册/释放结果）</td>
+</tr>
+<tr>
+<td>◎/robot/follow/task_ctrl <strong>〔参考 T1〕</strong></td>
+<td>A1 靠近</td>
+<td>跟随任务控制（召唤/人脸靠近）</td>
+<td><code>header</code>（消息头）<br><code>trigger</code>（启停开关——启动靠近/到位停止）<br><code>type</code>（跟随类型——2 召唤〔语音路径：走向持信标观众〕/3 人脸〔视觉路径：走向 VIP〕）<br><code>id</code>（目标标识——信标/人脸关联 ID）<br><code>x/y/h/w</code>（目标框——归一化坐标，与 follow_candidates 同制）<br><code>direction</code>（方向微调 1 左/2 右/3 近/4 远——本场景未用）<br><code>timestamp</code>（目标时间戳——时效校验）<br><code>token</code>（仲裁层凭据——同 task/request 出参 token，防越权）</td>
+<td><code>header</code>（消息头）——受理即回，执行状态看 /robot/follow/state</td>
+</tr>
+<tr>
+<td>◎/robot/follow/set_follow_task_biped <strong>〔参考 T1＋推断〕</strong></td>
+<td>A1 靠近</td>
+<td>双足跟随/靠近参数下发</td>
+<td>follow/task_ctrl 字段子集（双足形态参数，逐项如下）<br>目标保持距离（靠近到位阈值）<br>朝向保持（到位即正对观众）<br>掉队防抖 1500ms〔EV-T1P-37〕</td>
+<td><code>response</code>（CommonResponse——受理）</td>
+</tr>
+<tr>
+<td>/robot/perception/obstacle_check（IF-SP-07） <strong>〔参考 T1〕</strong></td>
+<td>A2/A3/A4 变形前</td>
+<td>定向障碍检查（变形净空门）</td>
+<td><code>header</code>（消息头）<br><code>direction</code>（检查方向位掩码 1 前/2 后/4 左/8 右/16 上——变形取全向 1+2+4+8）<br><code>range</code>（检查距离——变形净空半径）<br><code>height</code>（检查高度带——躯干抬升空间）<br><code>form</code>（形态 1 四足/2 双足——按当前形态碰撞盒评估）</td>
+<td><code>has_obstacle</code>（是否有障碍——true 则禁止变形）；<code>obstacle_direction</code>（障碍方向）；<code>confidence</code>（判定置信度）；<code>obstacle_type</code>（障碍类型）</td>
+</tr>
+<tr>
+<td>◎/robot/mc/set_action <strong>〔参考 T1＋推断〕</strong></td>
+<td>A2/A3/A4</td>
+<td>设置运动模式/动作（变形/站立；领路获准任务同面）</td>
+<td><code>header</code>（消息头）<br><code>source</code>（下发方——task_engine，空则拒绝 −10002）<br><code>command.action.value</code>（单一目标动作枚举——10-22 变形段〔双足↔四足：A2 去程变形/A4 返程变形〕、201 双足站立〔A3/A4 终态〕；中间动作由 mc 内部状态机自动迁移）<br><code>action_desc</code>（动作描述文本）</td>
+<td><code>task_id</code>（受理任务标识——受理≠完成，完成看 mc/common/state）；<code>state</code>（CommonState——SUCCESS 仅表示受理）</td>
+</tr>
+<tr>
+<td>◎/robot/mc/set_preset_motion <strong>〔参考 T1〕</strong></td>
+<td>A3 讲解</td>
+<td>预设区域动作（讲解手势）</td>
+<td><code>header</code>（消息头）<br><code>source</code>（下发方——task_engine）<br><code>area</code>（部位位掩码 1 左手/2 右手/4 头/8 腰——讲解手势取 1+2 双手〔双臂＝变形后前两腿，A-2〕）<br><code>motion</code>（预设动作 ID——讲解手势组）<br><code>interrupt</code>（可否被打断——true：新段落手势即时接管）<br><code>ani_path</code>（动作资源路径）</td>
+<td><code>task_id</code>（受理标识）；<code>state</code>（CommonState）</td>
+</tr>
+<tr>
+<td>◎/robot/navi/set_task <strong>〔参考 T1〕</strong></td>
+<td>A2/A4</td>
+<td>导航任务控制（领路目标/返程直达）</td>
+<td><code>header</code>（消息头）<br><code>action</code>（0 开始/1 暂停/2 继续/3 终止——A2 领路掉队时 1→0 等待观众跟上；A4 导航返程 TE 直调取 0〔不经领路〕）<br><code>goal</code>（目标位姿 PoseStamped——具身科技展台〔含终点朝向：到达即正对观众〕/展台入口）<br><code>description</code>（任务描述文本）</td>
+<td><code>response</code>（CommonResponse——受理；执行状态看 /robot/navi/state）</td>
+</tr>
+<tr>
+<td>◎/robot/audio/play_audio_file <strong>〔参考 T1＋推断〕</strong></td>
+<td>A1/A3/A4</td>
+<td>播放音频文件（全部声音播报——讲解模块承接）</td>
+<td><code>header</code>（消息头）<br><code>file.pkg_name</code>（音频来源包名——讲解模块预置库标识）<br><code>file.file_name</code>（文件名＝<strong>音频 ID</strong>——问候/询问、讲解段落 N、回答、送别话术）<br><code>file.file_path</code>（完整绝对路径——预置音频库定位）<br><code>file.priority</code>（播放优先级 1-10）<br><code>file.priority_weight</code>（优先级细化加权百分比）<br><code>file.media_role</code>（PulseAudio 角色——非 Music 播放时自动压低音乐音量）<br><code>file.info</code>（音频格式参数——PCM 必要，预缓存可省〔D《接口说明》AudioFile.msg〕）</td>
+<td><code>response</code>（CommonResponse——受理；播放完成状态经 interaction/tts_status 按 trace_id 回报）</td>
+</tr>
+<tr>
+<td>/robot/audio/set_volume（四口合一行为组：get_volume/set_volume/get_mute/set_mute） <strong>〔参考 T1〕</strong></td>
+<td>A1</td>
+<td>音量控制（场景音量档）</td>
+<td><code>header</code>（消息头）<br><code>audio_volume</code>（目标音量——迎宾/讲解场景档位〔set_mute 子口为 <code>is_mute</code> 布尔静音〕）</td>
+<td><code>response</code>（CommonResponse）；查询子口出 <code>audio_volume</code>/<code>is_mute</code>（当前值）</td>
+</tr>
+<tr>
+<td>/robot/display/play_emotion <strong>〔参考 T1〕</strong></td>
+<td>A1/A3</td>
+<td>表情/视频播放（胸屏）</td>
+<td><code>header</code>（消息头）<br><code>type</code>（播放类型——表情/视频）<br><code>emotion_ids[]</code>（表情 ID 序列——迎宾表情/讲解表情）<br><code>file_paths[]</code>（视频文件路径）<br><code>priority</code>（播放优先级）<br><code>loop_count</code>（循环次数）</td>
+<td><code>header</code>（消息头）——渲染由 display_ui 承接</td>
+</tr>
+<tr>
+<td>/robot/led/command <strong>〔参考 T1〕</strong></td>
+<td>A1（节拍点）</td>
+<td>整机灯带灯语（舞台显式灯语）</td>
+<td><code>request</code>（请求头）<br><code>led_strip_mode</code>（灯语模式 0-20 预设/254 自定义呼吸/255 自定义闪烁——迎宾舞台灯效取预设档）<br><code>r/g/b</code>（自定义颜色分量）<br><code>period</code>（呼吸/闪烁周期 ms）</td>
+<td><code>header</code>（消息头）——常规播报灯语走 tts_status/interaction/state 联动（要点⑥）</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="3-8-1-4-跨子系统边界的接口的详细数据结构">3.8.1.4 跨子系统边界的接口的详细数据结构</h4>
+<p>本小节给出本章图 3-7/3-8 中<strong>跨越子系统边界</strong>的接口（大脑↔软件平台 5 项＋预留 1 项、软件平台↔小脑 9 项，共 14＋1 项——<code>/robot/task/cancel</code> 为同族预留接口，场景 A 未触发取消流，结构先行给出）的详细数据结构；<strong>大脑↔小脑无直连接口</strong>（§3.2.2 边界：大脑不直接驱动小脑，一切经平台仲裁）。子系统内部接口（大脑内 asr_result/semantic_intent/face_info；平台内 bms/state、obstacle_check、play_emotion/led/command/set_volume；小脑内 set_input_source、velocity、follow_candidates 及领路→导航编排）不在此列，字段摘要见表 3-5/3-6。数据结构参考启元 T1 SDK（<code>docs/primebot/sdk_t1-v1.0.0.0/接口说明.md</code>）的 msg/srv 定义，<strong>证据加粗标注两档（每个代码块前的加粗标签）</strong>：<strong>〔参考 T1〕</strong>（SDK 原文）＝逐字段转录自 SDK PROTOCOL 定义（产品包名 <code>robot_msgs</code> 替换 <code>aimdk_msgs</code>）；<strong>〔合理推断〕</strong>（依 A 拟定）＝SDK 官方面未含该接口，字段清单依 A §5.1/§5.2 接口全表拟定、类型为建议值（正式定名归各特性域章节）。</p>
+<p><strong>通用类型</strong>（robot_msgs/common，各接口引用）——<strong>〔参考 T1〕</strong>（SDK 原文转录）：</p>
+<pre class="codeblock" data-lang="srv"># RequestHeader（对标 aimdk_msgs/common/RequestHeader.msg）
+builtin_interfaces/Time stamp          # 请求时间戳
+
+# ResponseHeader（对标 aimdk_msgs/common/ResponseHeader.msg）
+builtin_interfaces/Time stamp          # 响应时间戳
+int64  code                            # 响应码
+
+# CommonState（对标 aimdk_msgs/common/CommonState.msg）
+int32  value     # 0 UNKNOWN/1 SUCCESS/2 FAILURE/3 ABORTED/4 TIMEOUT/5 INVALID/6 IN_MANUAL/100 NOT_READY/200 PENDING/300 CREATED/400 RUNNING
+uint32 reason    # 故障原因码（0 成功/1 开箱中/2 开机自检/3 关机中/…）
+
+# CommonTaskResponse（对标 aimdk_msgs/common/CommonTaskResponse.msg）
+ResponseHeader header                  # 响应头
+uint64 task_id                         # 任务标识（受理≠完成，完成看各域状态话题）
+CommonState state                      # 受理结果状态
+
+# TokenCommon（对标 aimdk_msgs/interaction/msg/TokenCommon.msg）
+string source                          # 来源标识（不能为空）
+string token                           # 令牌（可为空）
+</pre>
+<p><strong>A. 大脑 ↔ 软件平台（5 项＋预留 1 项）</strong></p>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.2 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/TaskRequest —— /robot/task/request（对标 aimdk_msgs/srv/AmRequest〔依 A 拟定〕）
+# 大脑·任务规划 → 平台·task 调度框架：任务仲裁请求（A1~A4 四次下发）
+RequestHeader header                   # 请求头〔SDK 原文〕
+TokenCommon token_common               # 来源＋请求凭据〔SDK 原文〕
+uint8  source_type                     # 请求方类型 0-9（APP/AGENT/…/SYSTEM——场景取 AGENT）
+string requester_module                # 请求模块名（任务规划）
+uint8  am_mode                         # 仲裁模式：0 按 function_name 任务名/1 按 action 动作
+string function_name                   # 任务名（迎宾/领路/讲解/返回迎宾位）
+uint8  request_action_type             # am_mode=1：动作类型
+int32  request_action_id               # am_mode=1：动作 ID
+string scene_tag                       # 场景标签（巴展）
+string role_name                       # 角色名（权限判据）
+---
+ResponseHeader header                  # 响应头〔SDK 原文〕
+uint8  arbitration_result              # 仲裁结果：0 未知/1 拒绝/2 抢占/3 取消/4 二次确认/5 成功——回大脑
+uint8  arbitration_code                # 仲裁结果码
+uint32 arbitration_reason              # 原因码 0-66（拒绝时大脑据此改口/重试）
+string extra_message                   # 附加信息（JSON）
+string token                           # 仲裁层凭据——后续取消/控制携带以校验归属权（≠执行层 task_id）
+</pre>
+<blockquote>
+<p><strong>token 与 task_id 的分层区别</strong>（命名沿用 T1，勿混用）：<code>token</code>＝<strong>仲裁层凭据</strong>——AmRequest 获准后发给请求方，task/cancel、task/control、follow/task_ctrl 均携带以证明「该任务归我」、防越权操作他人任务（T1：AmRequest/AmCancel/ControlTask/FollowTaskCtrl 均带 token/token_common〔A §5.2〕）；<code>task_id</code>＝<strong>执行层任务实例标识</strong>——由 mc/域执行器在 CommonTaskResponse 返回（uint64，SDK 原文），用于轮询执行状态（get_action 200→100）并与 mc/common/state 的 task_info 对齐。第 5 章图 5-1 亦将两者并列为不同概念（TaskState FSM/token/task_id）。</p>
+</blockquote>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.2 拟定，类型为建议值；<strong>场景 A 未触发取消流，结构预留</strong>——场景 B/C 出现打断/取消时直接沿用）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/TaskCancel —— /robot/task/cancel（对标 aimdk_msgs/srv/AmCancel；对标 IF-TS-02 取消子面）
+# 大脑（或任一请求方）→ 平台·task 调度框架：取消长任务——token 定位「谁的任务」，am_mode＋cancel_target_id 定位「取消哪一个」
+RequestHeader header                   # 请求头〔SDK 原文〕
+TokenCommon token_common               # 归属权凭据〔SDK 原文〕——防越权（见上 token 分层注）
+uint8  source_type                     # 请求方类型（同 task/request）
+string cancel_reason                   # 取消原因（记录/回溯）
+uint8  am_mode                         # 取消维度（五粒度）：0 按动作 id/1 按动画 id/2 按任务名/3 按资源类型/4 全部
+string cancel_target_id                # 所选维度下的目标标识（任务名/动作 id 等——类型为建议值；am_mode=4 时无需填写）
+---
+ResponseHeader header                 # 响应头〔SDK 原文〕
+uint8  arbitration_result              # 1 已取消/2 失败
+string reason_message                  # 失败原因
+</pre>
+<blockquote>
+<p>任务与动作的取消粒度即 <code>am_mode</code> 两档（0 按动作 id＝运控层单指令、2 按任务名＝仲裁层业务单元）——任务/动作的分层区别见要点⑦与第 5 章 §5.6.2「mc 双指令面」；实际多数场景无需精确寻址（T1 同一时刻仅一个长任务 RUNNING〔EV-T1P-31/38〕），am_mode=4 全部取消为兜底形态。</p>
+</blockquote>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.1 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/InteractionState —— /robot/interaction/state（对标 /aima/interaction/state〔依 A 拟定〕）
+# 平台 → 大脑（任务规划实时状态可见）；平台内 APP 亦订阅（任务态灯语联动）
+std_msgs/Header header
+uint64 interaction_id                  # 长任务实例标识
+uint8  mp_state                        # 上肢动作态（讲解手势进行中）
+uint8  form_state                      # 形态（四足/双足）
+uint8  action_info                     # 当前动作摘要
+uint8  mode                            # 0 室内/1 户外/2 超能
+uint8  mode_speed                      # 模式速度档
+uint8  task_state                      # 任务类型 1-17（迎宾/领路/讲解各阶段任务态）
+</pre>
+<p><strong>〔参考 T1〕</strong>（SDK 原文转录）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/PlayAudioFile —— /robot/audio/play_audio_file（对标 aimdk_msgs/srv/PlayAudioFile〔SDK 原文〕）
+# 平台·TE → 大脑·讲解模块：预置固定话术与讲解语音播报（A1 问候/A3 讲解段落/回答/A4 送别）
+RequestHeader request
+AudioFile file                         # 音频信息（见下）
+---
+CommonResponse response                # 受理结果；播放完成状态经 tts_status 回报
+</pre>
+<p><strong>〔参考 T1〕</strong>（SDK 原文转录）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/AudioFile（对标 aimdk_msgs/hal/audio/msg/AudioFile.msg〔SDK 原文〕）
+string pkg_name                        # 来源包名（讲解模块预置库标识）
+string file_name                       # 文件名＝音频 ID（问候/询问、讲解段落 N、回答、送别话术）
+string file_path                       # 完整绝对路径（预置音频库定位）
+AudioInfo info                         # 音频格式参数（PCM 必要，预缓存可省）
+uint32 priority                        # 播放优先级 1-10
+uint32 priority_weight                 # 优先级细化加权百分比
+string media_role                      # PulseAudio 角色：Alert/Notification/Communication/Music（非 Music 播放自动压低音乐音量）
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.1 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/TtsStatus —— /robot/interaction/tts_status（对标 /interaction/tts_status〔依 A 拟定〕）
+# 大脑·讲解模块 → 平台·本体 APP：播报状态（灯语联动〔EV-T1P-64〕）
+string text                            # 播报文本回显
+uint32 priority                        # 播报优先级
+string trace_id                        # 播报实例标识（打断/完成按其对齐）
+uint8  tts_status                      # 播放中/完成/失败
+string domain                          # 播报域
+string error_message                   # 失败原因
+</pre>
+<blockquote>
+<p>/robot/sensor/camera/head_stereo_left（平台→大脑：人脸识别/信标锁定输入；平台→小脑：ReID）：<code>sensor_msgs/Image</code> 标准 ROS 类型（2592×1944、10fps、iceoryx 板内〔EV-T1P-48〕），无自定义结构——<strong>〔参考 T1〕</strong>（标准 ROS 类型，参数为 T1 实测）。</p>
+</blockquote>
+<p><strong>B. 软件平台 ↔ 小脑（9 项）</strong></p>
+<p><strong>〔参考 T1〕</strong>（SDK 原文转录）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/SetMcAction —— /robot/mc/set_action（对标 aimdk_msgs/mc/action/srv/SetMcAction.srv〔SDK 原文〕）
+# 平台·TE → 小脑·运控（A2/A4 变形、A3 双足站立）与领路域（获准任务同面）
+RequestHeader header
+string source                          # 触发源（task_engine，空则拒绝）
+McActionCommand command                # 动作命令（见下）
+---
+CommonTaskResponse response            # task_id＋state（受理≠完成）
+</pre>
+<p><strong>〔参考 T1〕</strong>（SDK 原文转录，含 McAction 枚举）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/mc/action/McActionCommand（对标 aimdk_msgs/mc/action/McActionCommand.msg〔SDK 原文〕）
+McAction action                        # 动作枚举
+string action_desc                     # 动作描述
+
+# robot_msgs/mc/action/McAction：int32 value〔SDK 原文枚举，场景相关节选〕
+#  10 QUADRUPED_TO_BIPED 四足→双足·常规      11 QUADRUPED_TO_BIPED_ROTATE 同·带旋转
+#  20 BIPED_TO_QUADRUPED 双足→四足·常规      21 BIPED_TO_QUADRUPED_ROTATE 同·带旋转
+# 101 QUADRUPED_STAND_DEFAULT 四足站立      102 QUADRUPED_LOCOMOTION_DEFAULT 四足行走
+# 115 QUADRUPED_READY_STAND_DEFAULT 预备站立
+# 201 BIPED_STAND_DEFAULT 双足站立          202 BIPED_LOCOMOTION_DEFAULT 双足行走
+# 300 BIPED_LOCOMOTION_WBC 双足全身控制
+# （全量 40 项见 D《接口说明》McAction 枚举字典；中间动作由 mc 内部状态机自动迁移）
+</pre>
+<p><strong>〔参考 T1〕</strong>（SDK 原文转录，含 McControlArea/McPresetMotion 枚举）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/SetMcPresetMotion —— /robot/mc/set_preset_motion（对标 aimdk_msgs/mc/motion/srv/SetMcPresetMotion.srv〔SDK 原文〕）
+# 平台·TE → 小脑·运控：A3 讲解手势（area=1+2 双手）
+RequestHeader header
+string source                          # 触发源（task_engine）
+McControlArea area                     # 部位位掩码：1 LEFT_HAND/2 RIGHT_HAND/4 HEAD/8 WAIST〔SDK 原文枚举〕
+McPresetMotion motion                  # 预设动作〔SDK 原文枚举节选：1001 右手挥手/1002 右手握手/1011 左手挥手/1012 左手握手…——讲解手势组沿此段定义〕
+bool interrupt                         # 打断前一动作（true：新段落手势即时接管）
+string ani_path                        # 自定义动作地址
+---
+CommonTaskResponse response
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.2 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/NaviTask —— /robot/navi/set_task（对标 /navi/command·SetNaviTask〔依 A 拟定〕）
+# 平台·TE → 小脑·导航（领路编排时经领路模块调用；A4 导航返程 TE 直调）
+RequestHeader header
+uint8 action                           # 0 开始/1 暂停/2 继续/3 终止/4 进低功耗/5 退低功耗（掉队暂停取 1→0）
+geometry_msgs/PoseStamped goal         # 目标位姿（具身科技展台〔含终点朝向〕/展台入口）
+string description                     # 任务描述
+---
+CommonResponse response                # 受理；执行状态看 /robot/navi/state
+</pre>
+<p><strong>〔参考 T1〕</strong>（<code>geometry_msgs/PoseStamped</code> 为<strong>标准 ROS 类型</strong>——ROS 官方定义，非 T1 自定义、非推断；T1 SetNaviTask 实测即用此类型传 goal〔A §5.2〕，本产品沿用。navi/set_task 的 <code>goal</code> 与 navi/state 的 <code>goal</code> 回显同此结构）：</p>
+<pre class="codeblock" data-lang="msg"># geometry_msgs/msg/PoseStamped（ROS 标准定义）
+std_msgs/Header header                 # 时间戳＋坐标系（导航目标取 map 系）
+geometry_msgs/Pose pose                # 目标位姿
+#   Point position（float64 x/y/z）            # 目标坐标（场景取展位平面坐标，z=0）
+#   Quaternion orientation（float64 x/y/z/w）  # 朝向四元数——含终点朝向：yaw 对准观众方向，
+#                                              # 到达即正对观众（A2 展台 goal / A4 返程后的站位同理）
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.2 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/FollowTaskCtrl —— /robot/follow/task_ctrl（对标 aimdk_msgs/srv/FollowTaskCtrl〔依 A 拟定〕）
+# 平台·TE → 小脑·跟随（A1 靠近：召唤/人脸）
+RequestHeader header
+uint8 trigger                          # 启停开关（启动靠近/到位停止）
+uint8 type                             # 1 跟随/2 召唤〔语音路径〕/3 人脸〔视觉路径〕/4 人体/5 方向/6 进梯/7 出梯/8 拍照跟随
+uint8 direction                        # 方向微调 1 左/2 右/3 近/4 远（本场景未用）
+uint64 id                              # 目标标识（信标/人脸关联 ID）
+float32 x                              # 目标框归一化左上 x（与 follow_candidates 同制）
+float32 y                              # 归一化左上 y
+float32 h                              # 归一化高
+float32 w                              # 归一化宽
+uint64 timestamp                       # 目标时间戳（时效校验）
+string token                           # 任务凭据
+---
+CommonResponse response                # 受理；执行状态看 /robot/follow/state
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.2 拟定，字段名为建议值）：</p>
+<pre class="codeblock" data-lang="srv"># robot_msgs/srv/SetFollowTaskBiped —— /robot/follow/set_follow_task_biped（对标 SetFollowTaskBiped〔依 A 拟定〕）
+# 平台·TE → 小脑·跟随：双足靠近参数（FollowTaskCtrl 字段子集＋双足专属项，建议字段）
+float32 follow_distance                # 目标保持距离（靠近到位阈值）
+bool   keep_orientation                # 朝向保持（到位即正对观众）
+uint32 lost_hold_ms                    # 丢失防抖（双足 1500ms〔EV-T1P-37〕）
+---
+CommonResponse response
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.1 拟定，类型为建议值）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/McCommonState —— /robot/mc/common/state（对标 /aima/mc/common/state〔依 A 拟定，场景相关字段节选〕）
+# 小脑·运控 → 平台·TE（50Hz〔EV-T1P-12〕；变形完成/站立就绪判定→触发下一步）
+std_msgs/Header header
+InputSource input_source               # 当前持权输入源（name/priority/timeout）
+McActionInfo action_info               # 当前动作（current_action/source/status/switch_ready）
+uint8  form_state                      # 形态（四足/双足——变形完成判定）
+uint8  fsm_state                       # mc 内部状态机
+float32[3] posture                     # 姿态 roll/pitch/yaw
+bool is_moving                         # 运动中
+bool is_fallen                         # 跌倒
+McTaskInfo task_info                   # task_id（与受理动作关联）
+# 全量另含 runtime_model/motion_status/lift_state/held_state 等，见 A §5.1
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.1 拟定）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/FollowState —— /robot/follow/state（对标 /aima/algo/follow/state〔依 A 拟定〕）
+# 小脑·跟随 → 平台·TE（靠近到位判定）
+uint8 state                            # 0 空闲/1 未发现/2 跟随中/3 丢失/4 跟错/5 太远/6 太近/7 受阻
+</pre>
+<p><strong>〔合理推断〕</strong>（字段依 A §5.1 拟定）：</p>
+<pre class="codeblock" data-lang="msg"># robot_msgs/msg/NaviState —— /robot/navi/state（对标 /aima/algo/navi/state〔依 A 拟定〕）
+# 小脑·导航 → 平台·TE（2s 周期〔B：nav2 state_publish_period〕；到达判定）
+uint8 state                            # 0 空闲/1 初始化/2 导航中/3 暂停/4 到达/5 失败/6 取消/7 低功耗/8 初始化失败
+geometry_msgs/PoseStamped goal         # 当前目标回显
+string description                     # 状态描述
+</pre>
+<blockquote>
+<p>/robot/sensor/tof/*/points（平台→小脑：导航内置避障输入）：<code>sensor_msgs/PointCloud2</code> 标准 ROS 类型（5 路、20Hz〔EV-T1P-46〕、组织点云），无自定义结构——<strong>〔参考 T1〕</strong>（标准 ROS 类型，参数为 T1 实测）。</p>
+</blockquote>
+<p><strong>注</strong>：① 数据结构与表 3-5/3-6 的参数摘要一一对应，正式 msg/srv 定名与字段终版归各特性域章节（TS/NV/VI/SP）；② SDK 原文转录仅做包名与路径替换（aimdk_msgs→robot_msgs、T1 话题路径→产品路径），枚举值未改动——变形动作 10/11/20/21 与双足站立 201 等<strong>本场景核心取值均有 SDK 官方定义支撑</strong>，非推断。</p>
+<hr />
+<h2 id="3-9-特性域-子系统归属映射">3.9 特性域 → 子系统归属映射</h2>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>特性域（README §4）</th>
+<th>归属子系统</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TS 任务调度框架与状态机管理</td>
+<td>平台</td>
+<td>治理线主体</td>
+</tr>
+<tr>
+<td>SP 传感器数据预处理与通用感知服务</td>
+<td><strong>跨两个子系统</strong>：预处理 → 平台；感知服务 → 小脑（暂定）</td>
+<td>特性域覆盖不变，归属拆分：传感器数据预处理（HAL/管线/标定/传输/质量）归平台；通用感知服务（融合避障/目标/语义/感知场景/EKF）归小脑（暂定，OP-ARCH-05 修订，见 §3.11）；部署同在感知算力板</td>
+</tr>
+<tr>
+<td>MC 运动控制服务</td>
+<td>小脑</td>
+<td>—</td>
+</tr>
+<tr>
+<td>VI 语音交互与 Agent</td>
+<td>大脑</td>
+<td>—</td>
+</tr>
+<tr>
+<td>NV 导航、建图与跟随</td>
+<td>小脑</td>
+<td>—</td>
+</tr>
+<tr>
+<td>OM 运维/健康/OTA</td>
+<td>平台</td>
+<td>环境/运维线，落 OS 基础服务模块</td>
+</tr>
+<tr>
+<td>SEC 安全与合规</td>
+<td>平台</td>
+<td>安全模块</td>
+</tr>
+<tr>
+<td>— App/云/SDK 接入</td>
+<td>平台（本体 APP）+ 大脑（云端智能）</td>
+<td>设备侧接入归平台，云端认知服务归大脑</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-10-对标映射与差异注记">3.10 对标映射与差异注记</h2>
+<h3 id="3-10-1-模块级对标映射">3.10.1 模块级对标映射</h3>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>本产品</th>
+<th>T1 Pro 对应（模块/板位）</th>
+<th>差异要点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>大脑·语音唤醒与识别</td>
+<td>rk：Agent（aimrt_agent）+ audio_manager 前端（讯飞 4 麦/silero VAD/DTLN）</td>
+<td>位置一致（语音链在主控板），本产品归入大脑子系统概念域</td>
+</tr>
+<tr>
+<td>大脑·视觉识别（<strong>交互视觉</strong>）</td>
+<td>rk：Agent 侧 NPU 六模型（face_detect/face_encode/gesture_cls/hand_detector/pose/reid）</td>
+<td>T1 交互视觉本就在 Agent 侧（rk NPU 就地推理）——归属一致；percep/person_track/coreon 系属感知视觉（下行）</td>
+</tr>
+<tr>
+<td>（<strong>感知视觉</strong>·归小脑·融合感知/实时避障，暂定）</td>
+<td>orin：percep（语义分割/语义代价图）、person_track（跟随检测/ReID）、coreon_fusion（融合避障）、nav2_perception（点云滤波/合并）</td>
+<td>T1 感知视觉本就随跟随/导航链分布在 orin（与小脑技能同侧）——本产品归属小脑与之同构；预处理输入由平台供给，「计算跟着传感器走」实证布局（第 6 章方案）</td>
+</tr>
+<tr>
+<td>大脑·意图识别</td>
+<td>rk：task_engine 内嵌 SemanticIntentPlugin（订阅 semantic_intent）；nlu_rules 本地 + 云端 NLU 仲裁</td>
+<td><strong>重组</strong>：T1 Pro 把意图识别放在任务引擎内，本产品划入大脑，须显式定义意图输出协议（OP-ARCH-03）</td>
+</tr>
+<tr>
+<td>大脑·长程任务规划</td>
+<td>rk：task_engine 内置 Orchestrator（场景步骤脚本）+ AgentFlow 图编程 + scene_engine 定时触发</td>
+<td>同上，规划与调度在 T1 Pro 同进程，本产品拆为大脑（规划）与平台（调度）两层（OP-ARCH-02）</td>
+</tr>
+<tr>
+<td>大脑·记忆</td>
+<td>端侧仅状态文件级（场景 state_file）+ 会话级；长期记忆依托云端/App</td>
+<td>对标缺口，见注记 2</td>
+</tr>
+<tr>
+<td>小脑·运控</td>
+<td>rk：mc + device_manager（关节 1kHz）+ hal</td>
+<td>—</td>
+</tr>
+<tr>
+<td>小脑·导航</td>
+<td>orin：nav2 栈 + legged_odom（rk）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>小脑·跟随</td>
+<td>orin：follow + person_track + coreon_fusion following 场景</td>
+<td>—</td>
+</tr>
+<tr>
+<td>平台·task 调度与状态</td>
+<td>rk：task_engine（AmRequest 仲裁）+ sm（SystemManager 9 态）</td>
+<td>三分治理结构直接继承（第 5 章）</td>
+</tr>
+<tr>
+<td>平台·传感器预处理</td>
+<td>双板：hal_camera/hal_rgbd/device_manager + percep/coreon/nav2_perception 内嵌预处理</td>
+<td>T1 Pro <strong>分散实现</strong>（6 处点云滤波、外参≥6 处，无统一模块）；本产品收敛为公共服务是第 6 章结论</td>
+</tr>
+<tr>
+<td>平台·推理框架</td>
+<td>orin：TensorRT/onnxruntime；rk：RKNN/MNN/sherpa-onnx——各模块自带</td>
+<td>本产品显式平台化（OP-ARCH-04 邻项，归第 6 章）</td>
+</tr>
+<tr>
+<td>平台·本体 APP</td>
+<td>rk：app_proxy（App 接入）/ lumina（灯语）/ audio_manager（TTS 播报）/ display_ui（表情）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>平台·安全</td>
+<td>分散：SM e-stop、规则门控、IMU 姿态安全、sys_guard 健康监控、跌倒守护</td>
+<td>见注记 3</td>
+</tr>
+<tr>
+<td>平台·OS 基础服务</td>
+<td>双板：em 进程编排 / ROS 2+FastDDS+iceoryx / linuxptp+chrony / sys_guard cgroup / drp 录包 / ota / hds 运维链</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3-10-2-差异注记">3.10.2 差异注记</h3>
+<ol>
+<li><strong>「大脑子系统」是对 T1 Pro 分布式现状的重组而非照搬</strong>：T1 Pro 的意图识别与场景编排住在 rk 的 task_engine 里、视觉在 orin、语音在 rk——认知能力物理上被拆在两板三处。本产品将其<strong>逻辑上</strong>归集为大脑子系统（板位是部署问题，见注记 4），收益是认知域可独立演进（换 LLM/加模态不动平台）；代价是必须显式定义「意图/计划 → 调度」的接口协议（可借鉴 T1 Pro 的 semantic_intent 话题 + AmRequest 服务形态，[EV-T1P-63][EV-T1P-27]）。</li>
+<li><strong>记忆是对标缺口（推断）</strong>：T1 Pro 端侧记忆证据仅到状态文件级（场景断点续跑 [EV-T1P-65]）与会话级（Agent 会话状态 [EV-T1P-16]），长期记忆（用户档案/偏好）在云端/App 侧，端侧证据不足。本产品记忆模块的分层范围（会话/任务/长期，端云边界）待产品定义（OP-ARCH-01）。</li>
+<li><strong>安全模块是收敛决策</strong>：T1 Pro 无独立安全模块，安全能力分散在 SM 急停 [EV-T1P-06]、任务规则门控 [EV-T1P-28][EV-T1P-37]、感知侧 IMU 姿态安全 [EV-T1P-44]、sys_guard 健康监控 [EV-T1P-20~22]、跌倒守护 reason 码 [EV-T1P-25]。本产品将其收敛为平台安全模块（统一安全状态/门控/监控/降级面），粒度与接口归 SEC 域章节展开。</li>
+<li><strong>部署注记</strong>：概念职责域 ≠ 板位。T1 Pro 实测形态即为例证：其「大脑」Agent 实际跑在 <strong>rk 运控板</strong>（非 orin——业务大脑 Agent 在 rk、感知/导航在 orin，主文档 §7.5 修正点①）；「小脑」拆在两板（运控在 rk 隔离核 CPU3 的 1kHz 实时环，导航/跟随及其感知视觉在 orin）；平台横跨两板——物理落板遵循「实时确定性 / 算力需求 / 大带宽数据不出采集板」三准则。本产品合理初值：大脑落感知算力板；小脑跨板（运控在实时运控板，导航/跟随在算力板）；平台随两板分布（调度与 OS 基座双板，预处理/推理重仓算力板）。具体板位属部署视图，随各特性域 X.5.6 细化（A-1 双板假设）。</li>
+<li><strong>「实时避障」在 T1 Pro 非独立模块；本产品列为逻辑模块但同进程实现（2026-11-13 决策）</strong>：T1 的避障内嵌于 coreon_fusion——BT 场景（<code>scene_avoidance</code>，tick 50ms）+ 服务面（SetAvoidance/ObstacleCheck）+ velocity 避障改写，与融合共用一个进程一份点云 [EV-T1P-39][EV-T1P-42][EV-T1P-43][EV-T1P-45]；而「跟随」是跨模块技能链（person_track＋follow_node＋coreon_fusion following 场景），避障作为<strong>横切反射能力</strong>同时服务跟随与导航（nav2 另有规划级避障）——两者在 T1 <strong>不平级</strong>（技能 vs 反射）。本产品仍将「实时避障」列为小脑独立逻辑模块（理由：① velocity 改写安全链路需明确归属与评审对象；② 50ms 反射与 30Hz 感知分属两档实时调度/降级策略；③ 跟随/导航/运镜多消费方的横切服务属性），实现上与「融合感知」的融合引擎<strong>同进程</strong>（边界三条见 §3.4 注记），兼得职责清晰与 T1 已验证的工程形态。</li>
+</ol>
+<hr />
+<h2 id="3-11-开放问题">3.11 开放问题</h2>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>问题</th>
+<th>归口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OP-ARCH-01</td>
+<td>记忆模块分层范围与端云边界（会话/任务/长期各存什么、端侧还是云端）</td>
+<td>产品定义 + VI 域</td>
+</tr>
+<tr>
+<td>OP-ARCH-02</td>
+<td>task 调度框架的板位与大脑/平台的进程边界（T1 Pro 调度在运控板；本产品若大脑在算力板，调度放哪块板、规划与调度是否同进程）</td>
+<td>第 5 章 + 部署视图</td>
+</tr>
+<tr>
+<td>OP-ARCH-03</td>
+<td>「意图/计划 → 调度」接口协议：意图类型字典、计划表达（步骤 DSL）、置信度与二次确认语义</td>
+<td>第 5 章 + VI 域</td>
+</tr>
+<tr>
+<td>OP-ARCH-04</td>
+<td>推理框架平台化的范围：统一模型仓/服务化面 vs 仅运行时基线约定（各模块自带引擎的对标现状 vs 收敛收益）</td>
+<td>第 6 章</td>
+</tr>
+<tr>
+<td>OP-ARCH-05</td>
+<td><s>视觉识别（大脑）与 SP 感知服务的边界</s> <strong>已裁决（2026-11-12）并修订（同日第二次）</strong>：交互视觉（人脸/手势/姿态，服务对话与个性化）归大脑·视觉识别；感知视觉（跟随目标检测/避障/语义分割，服务运动）归<strong>小脑（融合感知/实时避障，暂定）</strong>——<strong>平台不提供感知服务</strong>，仅提供传感器数据预处理（数据就绪）；小脑产出结果级感知自用并上报任务层，大脑不重复建设感知链路。剩余工作：目标服务接口细化、暂定归属复核</td>
+<td>第 6 章 + VI 域</td>
+</tr>
+<tr>
+<td>OP-ARCH-06</td>
+<td>本体 APP 与云端的职责切分：云端认知/记忆属大脑子系统的延伸，接口面如何定义</td>
+<td>I 类（App/云/SDK）章节</td>
+</tr>
+<tr>
+<td>OP-ARCH-07</td>
+<td><strong>巴展场景新增能力的模块化（2026-11-19，源自 §3.8）</strong>：① 领路/运镜/信标锁定/讲解模块暂以场景子模块表达，正式模块归属与接口定名待定（信标形态——视觉标签 vs UWB——若 UWB 需扩展传感接口面）；② <s>机型假设冲突——README §3「纯四足、不做双足变形」与巴展场景双足站立/四足↔双足变形需求矛盾</s> <strong>已裁决（2026-11-19）</strong>：产品确认支持<strong>双足站立＋四足↔双足变形，且双足形态下前两腿转为双臂、后两腿站立承重</strong>——双臂即讲解手势执行机构（<code>set_preset_motion</code> 左手/右手位掩码自洽）；README §3（对标对象、A-2）已修订</td>
+<td>产品定义 + NV/VI 域</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-12-对标证据引用清单">3.12 对标证据引用清单</h2>
+<p>本章引用的全部 EV 条目（EV-T1P-62~67 为本章新增，其余复用第 5/6 章既有条目）：</p>
+<div class="tbl-wrap"><table>
+<thead>
+<tr>
+<th>条目</th>
+<th>内容</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EV-T1P-62</td>
+<td>Agent 语音两级响应与 NLU 云优先仲裁：本地规则式 NLU（nlu_rules.json v1.4：语气词归一化+方向/技能实体+关键词意图——趴下/坐下/站起/变形/跳舞（含「给我跳个舞」原句）/跟随等；fuzzy_match 阈值 0.6、skills.json 技能表），nlu_arbitration_config.json 为 online_priority（cloud_timeout_ms=2000、置信度阈值 0.5）——云端优先、超时/离线本地接管；两级 TTS：固定话术本地直答（audio_pre_cache 预缓存 83 条云端合成 opus），开放回答云端合成流式播放；UC1 实测语音到首个动作 62s（云端会话主导），本地链路毫秒级</td>
+<td>A：§6.2（UC1 要点 1/3）；B：<code>RK/robot/software/aimrt_agent/bin/cfg/t1/{nlu_rules.json, nlu_arbitration_config.json}</code></td>
+</tr>
+<tr>
+<td>EV-T1P-63</td>
+<td>语义意图与识别结果接口：<code>/aima/agent/asr_result</code>（text/event_id/is_final 流式/confidence/language；task_engine、lumina 订阅）；<code>/aima/agent/semantic_intent</code>（SemanticIntent：type/value，LLM 结构化输出，task_engine 订阅，单向广播无返回）</td>
+<td>A：§5.1 Topic 接口表</td>
+</tr>
+<tr>
+<td>EV-T1P-64</td>
+<td>交互播控服务面：lumina_server 订阅 asr_result/face_info/play_state/bms/network/touch/interaction_state/tts_status/bluetooth 共 9 路做灯语联动，客户端 13 路服务（PlayTts/PlayEmotion/PlayAnimation/PlayMove/PlayLight/PlayAudioFile/PlayCustomMotion/SetMode/音量/AmCancel/TouchEnable 等）；audio_manager 承担 TTS 播放（tts_status 状态机：播放中/完成/失败，trace_id 对齐）；胸屏表情渲染 display_ui（UC1 表情渲染 CPU 约 3 倍增长）</td>
+<td>A：§4.3（lumina/drpe 条目）、§5.1（tts_status）、§6.2（UC1 要点 3）</td>
+</tr>
+<tr>
+<td>EV-T1P-65</td>
+<td>场景编排步骤脚本与断点续跑：task_engine 内置 Orchestrator 场景流程 DSL——状态=步骤（openbox_t1 共 26 步：S_ResumeGate/S00-S13/S98/S99_*），迁移=goto_step/case_switch，state_file 持久化（openbox_t1_state.json，断电续跑）；监控=FallDownWatchdog 跌倒守护+touch_triggers 触发；约束「goto 跨脚本不合法→state_set+return 交接」；动作词汇表（emoticon/light/nlg/audio/motion/wait/parallel/call 等）</td>
+<td>B：<code>RK/robot/software/task_engine/bin/cfg/orchestrator/{openbox_t1.yaml, global_config, scene_config}</code></td>
+</tr>
+<tr>
+<td>EV-T1P-66</td>
+<td>运维与数据记录链：drp（aima-dp-app）rosbag 持续录包（订阅 mc/common/state、mc/locomotion/velocity、mc/body_pose、bms/state，bag 落 /robot/persist/bag/，节点名含 pid）；ota_master/ota_slave、data_exporter、housekeeper、hds 构成云端运维链；各业务应用均受 SmNodeService ExecuteAction/ExecuteFallback 管理</td>
+<td>A：§3.2/§3.3（进程表）、§4.3、§7.3</td>
+</tr>
+<tr>
+<td>EV-T1P-67</td>
+<td>T1 迎宾问候链：<code>/aima/agent/greeting_state</code>（GreetingState：<code>state</code>=1 触发、<code>face_id</code>、<code>name</code>——人脸识别命中触发迎宾问候，app_proxy 订阅）；FaceGreet 服务（<code>id</code>、<code>greet_phrase[]</code>——人脸问候话术）；PlayAnimation <code>animation_id</code> 枚举含 1=问候、60=说话动作（讲解类上肢动作语义对标）；FollowTaskCtrl <code>type</code>=2 召唤/3 人脸（主动靠近目标的两种目标指定方式）</td>
+<td>A：§5.1（greeting_state 条目）、§5.2（FaceGreet/PlayAnimation/FollowTaskCtrl 条目）</td>
+</tr>
+</tbody>
+</table></div>
+<p>复用条目：EV-T1P-01/05/06/12/13/15/16/18/19/20/22/23/25/26/27/28/29/30/31/32/37/38/40/41/44/48/49/50/51/52/53/54/56/57/58/60/61（定义见第 5 章 §5.15 与第 6 章 §6.10）。</p>
+
+</main>
+</div>
+<footer style="max-width:1280px;margin:0 auto;padding:0 24px 32px;color:#94a3b8;font-size:12.5px">
+  由 <code>architecture-design.md</code>（V0.40，2026-11-20）完整转换生成 · 含 8 幅 mermaid 图（CDN 渲染）与全部表格/代码块 · 信息零删减
+</footer>
+<script>/* 与 GitHub 渲染保持一致：mermaid@12.3.0 + GitHub viewscreen 同款配置（theme: default，light 模式） */
+mermaid.initialize({startOnLoad:true, securityLevel:"antiscript",
+  secure:["secure","securityLevel","startOnLoad","maxTextSize"],
+  flowchart:{diagramPadding:48}, gantt:{useWidth:1200}, pie:{useWidth:1200},
+  sequence:{diagramMarginY:40}, theme:"default"});</script>
+</body>
+</html>
