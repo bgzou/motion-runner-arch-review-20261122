@@ -20,47 +20,47 @@
 
 仓库（公开）：
 
-**https://github.com/bgzou/collie-runner-arch-review-20261122**
+**https://github.com/bgzou/motion-runner-arch-review-20261122**
 
 先读这 5 份“元文档”，它们定义了阅读方式、证据级别与必须裁决的问题：
 
-1. [00_READ_ME_FIRST.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/00_READ_ME_FIRST.md)
-2. [02_CONTEXT_BRIEF.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/02_CONTEXT_BRIEF.md)
-3. [03_EVIDENCE_MAP.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/03_EVIDENCE_MAP.md)
-4. [04_OPEN_QUESTIONS.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/04_OPEN_QUESTIONS.md)
-5. [05_GLOSSARY.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/05_GLOSSARY.md)
+1. [00_READ_ME_FIRST.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/00_READ_ME_FIRST.md)
+2. [02_CONTEXT_BRIEF.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/02_CONTEXT_BRIEF.md)
+3. [03_EVIDENCE_MAP.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/03_EVIDENCE_MAP.md)
+4. [04_OPEN_QUESTIONS.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/04_OPEN_QUESTIONS.md)
+5. [05_GLOSSARY.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/05_GLOSSARY.md)
 
 然后按顺序读**核心设计输入**（这 12 份是必读，不要跳过）：
 
 | # | 文件 | 读什么 |
 |---|---|---|
-| 1 | [architecture/architecture-design.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/architecture-design.md) | 第 3 章总体架构：大脑/小脑/平台三子系统职责划分、边界判据、场景协同 |
-| 2 | [runner/runner-integration-master.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/runner/runner-integration-master.md) | **当前 Runner 主文档**：边界、接口、`IRunner`/`ActionBundle`、切换、配置、验收 |
-| 3 | [runner/runner-interface-and-dataflow.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/runner/runner-interface-and-dataflow.md) | 字段、tensor、obs/action 规格、golden fixture |
-| 4 | [system/t1-architecture-deep-dive.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/t1-architecture-deep-dive.md) | 第 0/2/3/6/8/10 章：双板三机、频率、Runner、数据链路、安全 |
-| 5 | [system/motion-control-architecture-delivery.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/motion-control-architecture-delivery.md) | **简化交付方案**：Behavior/Mode/Scope、4 RPC、Lease、线程模型 |
-| 6 | [architecture/security-module-architecture.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/security-module-architecture.md) | 第 12 章安全模块：需求、失效模型、分层、接口 |
-| 7 | [system/three-links-safety-switching-shaping.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/three-links-safety-switching-shaping.md) | 安全/切换/整形三条链路 |
-| 8 | [system/t1-safety-design.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/t1-safety-design.md) | T1 安全 4+1：五类后果、六条异常路径、八层纵深 |
-| 9 | [architecture/task-engine-and-state-machine.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.md) | 第 5 章任务调度与状态机：上游如何调用 MC |
-| 10 | [evidence/interfaces/MC_INTERFACE_CATALOG.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/interfaces/MC_INTERFACE_CATALOG.md) | MC 相关 `.msg/.srv` 全量定义 |
-| 11 | [evidence/configs/mc_T1.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/mc_T1.yaml) + [evidence/configs/action_setting.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/action_setting.yaml) + [evidence/configs/action_ruler.yaml](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/configs/action_ruler.yaml) | 真机话题/服务/速度源/执行组/切换边 |
-| 12 | [evidence/model-list/action-execution-runner.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/model-list/action-execution-runner.md) + [evidence/model-list/rule-graph-stats.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/model-list/rule-graph-stats.md) | 58/62/42/34/15、52 节点/197 边 |
+| 1 | [architecture/architecture-design.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/architecture-design.md) | 第 3 章总体架构：大脑/小脑/平台三子系统职责划分、边界判据、场景协同 |
+| 2 | [runner/runner-integration-master.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/runner/runner-integration-master.md) | **当前 Runner 主文档**：边界、接口、`IRunner`/`ActionBundle`、切换、配置、验收 |
+| 3 | [runner/runner-interface-and-dataflow.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/runner/runner-interface-and-dataflow.md) | 字段、tensor、obs/action 规格、golden fixture |
+| 4 | [system/t1-architecture-deep-dive.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/t1-architecture-deep-dive.md) | 第 0/2/3/6/8/10 章：双板三机、频率、Runner、数据链路、安全 |
+| 5 | [system/motion-control-architecture-delivery.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/motion-control-architecture-delivery.md) | **简化交付方案**：Behavior/Mode/Scope、4 RPC、Lease、线程模型 |
+| 6 | [architecture/security-module-architecture.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/security-module-architecture.md) | 第 12 章安全模块：需求、失效模型、分层、接口 |
+| 7 | [system/three-links-safety-switching-shaping.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/three-links-safety-switching-shaping.md) | 安全/切换/整形三条链路 |
+| 8 | [system/t1-safety-design.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/t1-safety-design.md) | T1 安全 4+1：五类后果、六条异常路径、八层纵深 |
+| 9 | [architecture/task-engine-and-state-machine.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.md) | 第 5 章任务调度与状态机：上游如何调用 MC |
+| 10 | [evidence/interfaces/MC_INTERFACE_CATALOG.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/interfaces/MC_INTERFACE_CATALOG.md) | MC 相关 `.msg/.srv` 全量定义 |
+| 11 | [evidence/configs/mc_T1.yaml](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/configs/mc_T1.yaml) + [evidence/configs/action_setting.yaml](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/configs/action_setting.yaml) + [evidence/configs/action_ruler.yaml](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/configs/action_ruler.yaml) | 真机话题/服务/速度源/执行组/切换边 |
+| 12 | [evidence/model-list/action-execution-runner.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/model-list/action-execution-runner.md) + [evidence/model-list/rule-graph-stats.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/model-list/rule-graph-stats.md) | 58/62/42/34/15、52 节点/197 边 |
 
-**HTML 对照（重要）**：第 3 章与第 5 章另有独立 HTML 渲染版——[architecture/architecture-design.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/architecture-design.html)、[architecture/task-engine-and-state-machine.html](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.html)。它们保留了版式、表格与图，适合确认结构；但**正文论证以对应 `.md` 为权威文本**，不要只读 HTML 而漏掉 Markdown 中的证据与注释。
+**HTML 对照（重要）**：第 3 章与第 5 章另有独立 HTML 渲染版——[architecture/architecture-design.html](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/architecture-design.html)、[architecture/task-engine-and-state-machine.html](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.html)。它们保留了版式、表格与图，适合确认结构；但**正文论证以对应 `.md` 为权威文本**，不要只读 HTML 而漏掉 Markdown 中的证据与注释。
 
 **如果浏览能力/上下文受限**：至少读 `00_READ_ME_FIRST.md`、`02_CONTEXT_BRIEF.md`、`runner/runner-integration-master.md`、`architecture/architecture-design.md`、`system/motion-control-architecture-delivery.md` 这 5 份；在 Part 1 开头列出你实际读了哪些、没读哪些、对设计结论有什么影响。**不要假装读过**。
 
 **选读（需要时再打开）**：
 
-- 需求原文：[requirements/requirements-scenarios.txt](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/requirements/requirements-scenarios.txt)
-- 对外接口说明：[system/motion-external-interfaces.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/motion-external-interfaces.md)
-- T1 4+1 全文：[system/t1-4plus1-architecture.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/system/t1-4plus1-architecture.md)
-- T1 MC 拆解：[runner/t1-mc-decomposition.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/runner/t1-mc-decomposition.md)
-- T1 硬件/OS/SDK：[reference/t1-pro-orin-rk-analysis.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/reference/t1-pro-orin-rk-analysis.md)、[reference/t1-pro-developer-sdk-analysis.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/reference/t1-pro-developer-sdk-analysis.md)
-- 参考实现：[reference/quadruped-software-architecture.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/reference/quadruped-software-architecture.md)
-- 安全/任务/感知的原始章节：[architecture/task-engine-and-state-machine.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.md)、[architecture/sensor-preprocessing-and-perception.md](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/architecture/sensor-preprocessing-and-perception.md)
-- 图表：[evidence/diagrams/strategy-switching.png](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/diagrams/strategy-switching.png)、[evidence/diagrams/strategy-chain.png](https://github.com/bgzou/collie-runner-arch-review-20261122/blob/main/evidence/diagrams/strategy-chain.png)
+- 需求原文：[requirements/requirements-scenarios.txt](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/requirements/requirements-scenarios.txt)
+- 对外接口说明：[system/motion-external-interfaces.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/motion-external-interfaces.md)
+- T1 4+1 全文：[system/t1-4plus1-architecture.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/system/t1-4plus1-architecture.md)
+- T1 MC 拆解：[runner/t1-mc-decomposition.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/runner/t1-mc-decomposition.md)
+- T1 硬件/OS/SDK：[reference/t1-pro-orin-rk-analysis.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/reference/t1-pro-orin-rk-analysis.md)、[reference/t1-pro-developer-sdk-analysis.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/reference/t1-pro-developer-sdk-analysis.md)
+- 参考实现：[reference/quadruped-software-architecture.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/reference/quadruped-software-architecture.md)
+- 安全/任务/感知的原始章节：[architecture/task-engine-and-state-machine.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/task-engine-and-state-machine.md)、[architecture/sensor-preprocessing-and-perception.md](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/architecture/sensor-preprocessing-and-perception.md)
+- 图表：[evidence/diagrams/strategy-switching.png](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/diagrams/strategy-switching.png)、[evidence/diagrams/strategy-chain.png](https://github.com/bgzou/motion-runner-arch-review-20261122/blob/main/evidence/diagrams/strategy-chain.png)
 
 如果某个 GitHub 页面打不开：改读仓库根目录的 `README.md`（有完整索引），或让用户把对应 `.md` 原文粘贴给你。**不要因为少读一份就降低交付完整度**。
 

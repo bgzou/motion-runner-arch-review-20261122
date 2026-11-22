@@ -1,4 +1,4 @@
-# Collie Runner Architecture Review · 2026-11-22
+# Motion Runner Architecture Review · 2026-11-22
 
 > 输入包：为网页版 GPT 提供 **Collie 轮足机器人运控（MC）Runner 框架**完整架构设计所需的架构、接口、真机配置与逆向证据。
 > 目标：让 GPT 产出一份**可评审、可落地、可验收**的软件架构设计，而不是文档润色。
