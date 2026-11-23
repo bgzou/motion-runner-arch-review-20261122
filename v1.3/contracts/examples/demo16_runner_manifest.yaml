@@ -1,0 +1,84 @@
+schema_version: '1.1'
+manifest_id: demo16_locomotion
+version: 1.1.0
+action_id: demo16_loco
+behavior_id: demo16_loco
+robot_compatibility:
+  robot_ids:
+  - demo16_nonphysical
+  topology_sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  calibration_sha256: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+runner:
+  class_id: RlLocomotionRunner
+  execution_kind: ONNX
+  behavior_role: LOCOMOTION
+  backend_id: onnxruntime_cpu
+  abi_version: '1'
+  period_ms: 10
+  worker_budget_ms: 7.6
+asset:
+  kind: MODEL
+  path: demo16_model.placeholder
+  sha256: c15fdb090e288b789244f49ab8286367228c0716cddf19fdddb16803fd4754e0
+tensor_io:
+  inputs:
+  - name: demo_obs
+    dtype: FLOAT32
+    shape:
+    - 1
+    - 16
+    semantic: joint_positions
+  outputs:
+  - name: demo_act
+    dtype: FLOAT32
+    shape:
+    - 1
+    - 16
+    semantic: joint_commands
+obs_spec:
+  path: demo16_obsspec.csv
+  sha256: fdc6971b6311a7ac33c35e84030724ca6f7804f6a30382fa05d2d6e7bd3c1683
+action_spec:
+  path: demo16_actionspec.csv
+  sha256: 9265d029b9f6e9ec81178c65b98037578b4a7a935b433359474d9942db30feab
+owns:
+- fl_hip
+- fl_thigh
+- fl_calf
+- fr_hip
+- fr_thigh
+- fr_calf
+- rl_hip
+- rl_thigh
+- rl_calf
+- rr_hip
+- rr_thigh
+- rr_calf
+- fl_wheel
+- fr_wheel
+- rl_wheel
+- rr_wheel
+entry:
+  predicates:
+  - feedback_fresh
+  - form_quad
+  - support_valid
+  max_duration_ms: 1000
+exit:
+  predicates:
+  - speed_stable
+  - support_valid
+  max_duration_ms: 2000
+  stable_ms: 100
+completion:
+  predicates:
+  - stable
+  max_duration_ms: 2000
+  stable_ms: 100
+failure_target: DAMPING
+golden:
+  path: demo16_golden.placeholder
+  sha256: 4e4af856556200490cd22c20f494411c7958a11f0be7c52dc2ab0dc01e34ed3d
+release:
+  status: CANDIDATE
+  release_id: demo16-1.1.0-NOT-DEPLOYABLE

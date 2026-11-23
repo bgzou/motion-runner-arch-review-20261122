@@ -1,0 +1,52 @@
+syntax = "proto3";
+package collie.mc.v1_1;
+// Canonical semantic schema. RT IPC must use a generated, fixed-capacity layout;
+// protobuf wire serialization is for API/status; not permitted to allocate in RT.
+// UUID bytes = 16, SHA256 bytes = 32. Validate exact lengths at ingress.
+
+enum PreemptMode { PREEMPT_UNSPECIFIED = 0; NO_PREEMPT = 1; WHEN_EXIT_READY = 2; SAFE_STOP_REQUEST = 3; }
+enum Form { FORM_UNKNOWN = 0; FORM_QUAD = 1; FORM_TRANSFORM = 2; FORM_BIPED = 3; }
+enum SwitchPhase { SWITCH_UNSPECIFIED = 0; SWITCH_REQUESTED = 1; SWITCH_PREPARING = 2; SWITCH_WAIT_EXIT = 3; SWITCH_ENTERING = 4; SWITCH_TRANSITIONING = 5; SWITCH_STABILIZING = 6; SWITCH_RUNNING = 7; SWITCH_FAILED = 8; SWITCH_SAFE = 9; }
+enum SafetyState { SAFETY_INIT = 0; SAFETY_NORMAL = 1; SAFETY_DEGRADED = 2; SAFETY_SAFE_HOLD = 3; SAFETY_DAMPING = 4; SAFETY_ESTOP = 5; SAFETY_RECOVERY = 6; }
+enum ExitKind { EXIT_UNSPECIFIED = 0; EXIT_READY = 1; EXIT_WAIT = 2; EXIT_REFUSE = 3; }
+enum ControlLeaseState { CONTROL_IDLE = 0; CONTROL_REQUESTED = 1; CONTROL_GRANTED = 2; CONTROL_RENEWING = 3; CONTROL_REVOKING = 4; CONTROL_REVOKED = 5; CONTROL_EXPIRED = 6; }
+enum JointMode { JOINT_PASSIVE = 0; JOINT_POSITION = 1; JOINT_VELOCITY = 2; JOINT_TORQUE = 3; JOINT_DAMPING = 4; }
+enum HalState { HAL_SAFE = 0; HAL_REQUEST_OWNERSHIP = 1; HAL_GRANTED = 2; HAL_ACTIVE = 3; HAL_REVOKING = 4; HAL_FAULT = 5; HAL_UNKNOWN = 6; }
+enum HalRejectReason { HAL_REJECT_NONE = 0; HAL_NOT_OWNER = 1; HAL_BAD_WRITER_TOKEN = 2; HAL_WRONG_BOOT_ID = 3; HAL_STALE_SEQ = 4; HAL_EPOCH_MISMATCH = 5; HAL_EPOCH_NOT_PREPARED = 6; HAL_DEADLINE_EXPIRED = 7; HAL_CLOCK_INVALID = 8; HAL_CRC_MISMATCH = 9; HAL_JOINT_COUNT_MISMATCH = 10; HAL_JOINT_INDEX_MISMATCH = 11; HAL_UNSUPPORTED_MODE = 12; HAL_NONFINITE = 13; HAL_LIMIT_VIOLATION = 14; HAL_NOT_ACTIVE = 15; HAL_FAULT_LATCHED = 16; HAL_BUS_UNAVAILABLE = 17; HAL_MODE_NOT_PREPARED = 18; }
+enum HalWatchdogState { HAL_WATCHDOG_ARMED = 0; HAL_WATCHDOG_REFRESHED = 1; HAL_WATCHDOG_EXPIRED = 2; HAL_WATCHDOG_UNAVAILABLE = 3; }
+message RequestHeader { bytes request_id = 1; bytes session_id = 2; uint32 source_id = 3; uint64 issued_utc_ns = 4; uint32 timeout_ms = 5; bytes payload_digest = 6; }
+message ActionRequest { RequestHeader header = 1; string action_id = 2; bytes validated_params = 3; PreemptMode preempt_mode = 4; bytes control_lease_id = 5; }
+message ScheduledAction { ActionRequest request = 1; uint64 deadline_ns = 2; }
+message BodyVelocityRef { bytes session_id = 1; bytes control_lease_id = 2; uint32 source_id = 3; uint64 seq = 4; uint64 stamp_robot_ns = 5; uint32 ttl_ms = 6; string frame_id = 7; float vx_mps = 8; float vy_mps = 9; float wz_radps = 10; }
+message EffectiveVelocity { float vx_mps = 1; float vy_mps = 2; float wz_radps = 3; }
+message MotionStatus {
+  bytes boot_id = 1; bytes request_id = 2; bytes execution_id = 3; bytes session_id = 4;
+  uint64 seq = 5; uint64 action_epoch = 6; uint64 stamp_robot_ns = 7; uint32 source_id = 8;
+  string current_action = 9; string target_action = 10; SwitchPhase phase = 11;
+  uint32 transition_phase = 12; Form form = 13; bool stable = 14; bool switch_ready = 15;
+  bool action_done = 16; string active_primary = 17; repeated string active_overlays = 18;
+  EffectiveVelocity effective_velocity = 19; uint32 effective_velocity_source_id = 20;
+  uint32 effective_velocity_age_ms = 21; SafetyState safety_state = 22;
+  uint32 latched_fault_code = 23; uint32 feedback_age_max_ms = 24;
+  uint32 inference_age_ms = 25; string release_id = 26; bytes manifest_sha256 = 27;
+  bytes control_lease_id = 28; ControlLeaseState control_lease_state = 29;
+  HalState hal_state = 30; uint64 hal_last_ack_seq = 31;
+  HalRejectReason hal_last_reject_reason = 32;
+}
+// Non-RT semantic mirror only; the full RT RobotStateSnapshot remains a
+// preallocated, fixed-capacity struct defined at D5.2. This header prevents
+// conflicting snapshot field names in code generation and documentation.
+message RobotStateSnapshotHeader { bytes boot_id = 1; uint64 tick_id = 2; uint64 snapshot_seq = 3; uint64 snapshot_robot_time_ns = 4; }
+message JointTarget { string name = 1; uint32 index = 2; JointMode mode = 3; float q_rad = 4; float dq_radps = 5; float tau_nm = 6; float kp = 7; float kd = 8; bool enabled = 9; }
+message JointTargetArray { bytes boot_id = 1; uint64 action_epoch = 2; uint64 tick_id = 3; uint64 snapshot_seq = 4; uint64 deadline_ns = 5; uint32 joint_count = 6; repeated JointTarget joints = 7; }
+message ExitDecision { ExitKind kind = 1; uint32 reason_code = 2; uint64 snapshot_seq = 3; uint64 valid_until_ns = 4; uint64 retry_not_before_ns = 5; }
+message SealedExitDecision { bytes boot_id = 1; uint64 action_epoch = 2; bytes runner_instance_id = 3; uint64 seal_seq = 4; uint64 snapshot_stamp_ns = 5; ExitDecision data = 6; }
+// Control-plane messages are sent by the authenticated unique writer through
+// a privileged, non-blocking channel. A successful write is not an ACK.
+message HalOwnershipRequest { bytes boot_id = 1; uint64 writer_id = 2; uint64 request_seq = 3; uint64 initial_epoch = 4; bytes capability_digest = 5; }
+message HalEpochPrepare { bytes boot_id = 1; uint64 writer_id = 2; uint64 expected_old_epoch = 3; uint64 new_epoch = 4; bytes switch_tx_id = 5; uint64 expires_mono_ns = 6; }
+message HalRevokeRequest { bytes boot_id = 1; uint64 writer_id = 2; uint64 request_seq = 3; uint32 reason_code = 4; }
+message HalModePrepare { bytes boot_id = 1; uint64 writer_id = 2; uint64 action_epoch = 3; uint64 mode_plan_id = 4; repeated uint32 joint_indices = 5; repeated JointMode from_modes = 6; repeated JointMode to_modes = 7; uint64 deadline_ns = 8; uint32 payload_crc = 9; bytes switch_tx_id = 10; }
+message HalCommand { bytes boot_id = 1; uint64 writer_id = 2; uint64 seq = 3; uint64 action_epoch = 4; uint64 deadline_ns = 5; uint32 payload_crc = 6; uint32 joint_count = 7; repeated JointTarget joints = 8; uint64 mode_plan_id = 9; }
+message HalStatus { uint64 ack_event_seq = 1; uint64 seq_ack = 2; bool accepted = 3; HalRejectReason reject_reason = 4; HalWatchdogState watchdog_state = 5; uint64 active_writer = 6; HalState hal_state = 7; uint64 fault_bits = 8; uint64 active_epoch = 9; uint64 last_accepted_seq = 10; uint64 last_accept_mono_ns = 11; uint64 prepared_mode_plan_id = 12; bool mode_plan_ready = 13; bytes boot_id = 14; uint64 status_stamp_mono_ns = 15; uint64 last_ack_mono_ns = 16; uint64 pending_epoch = 17; bool epoch_prepared = 18; bytes epoch_prepare_tx_id = 19; }
+message ControlLease { bytes lease_id = 1; bytes session_id = 2; uint32 owner_source_id = 3; uint64 seq = 4; bytes boot_id = 5; string scope = 6; uint32 ttl_ms = 7; uint64 expires_mono_ns = 8; uint32 priority = 9; ControlLeaseState state = 10; }

@@ -1,0 +1,17 @@
+tensor_name,index,block,element,source,source_field,joint_or_axis,unit,frame,transform,offset,scale,clip_min,clip_max,filter_id,history_lag,history_order,include_current,initial_fill,missing_policy_ref,dtype
+demo_obs,0,joint_position,0,joints,q,fl_hip,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,1,joint_position,1,joints,q,fl_thigh,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,2,joint_position,2,joints,q,fl_calf,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,3,joint_position,3,joints,q,fr_hip,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,4,joint_position,4,joints,q,fr_thigh,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,5,joint_position,5,joints,q,fr_calf,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,6,joint_position,6,joints,q,rl_hip,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,7,joint_position,7,joints,q,rl_thigh,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,8,joint_position,8,joints,q,rl_calf,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,9,joint_position,9,joints,q,rr_hip,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,10,joint_position,10,joints,q,rr_thigh,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,11,joint_position,11,joints,q,rr_calf,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,12,joint_position,12,joints,q,fl_wheel,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,13,joint_position,13,joints,q,fr_wheel,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,14,joint_position,14,joints,q,rl_wheel,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32
+demo_obs,15,joint_position,15,joints,q,rr_wheel,rad,joint,CENTER_SCALE_CLIP,0.0,1.0,-100.0,100.0,none,0,OLDEST_TO_NEWEST,true,REPEAT_FIRST,STRICT_INVALID,FLOAT32

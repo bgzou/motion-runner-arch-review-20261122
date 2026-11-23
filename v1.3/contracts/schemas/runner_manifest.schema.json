@@ -1,0 +1,432 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collie RunnerManifest V1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "manifest_id",
+    "version",
+    "action_id",
+    "behavior_id",
+    "robot_compatibility",
+    "runner",
+    "asset",
+    "tensor_io",
+    "obs_spec",
+    "action_spec",
+    "owns",
+    "entry",
+    "exit",
+    "completion",
+    "failure_target",
+    "golden",
+    "release"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1"
+    },
+    "manifest_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "action_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "behavior_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "robot_compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "robot_ids",
+        "topology_sha256",
+        "calibration_sha256"
+      ],
+      "properties": {
+        "robot_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "topology_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "calibration_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class_id",
+        "execution_kind",
+        "behavior_role",
+        "backend_id",
+        "abi_version",
+        "period_ms",
+        "worker_budget_ms"
+      ],
+      "properties": {
+        "class_id": {
+          "enum": [
+            "RlLocomotionRunner",
+            "WheelDriveRunner",
+            "TransitionRunner",
+            "BalanceRunner",
+            "ClassicalPoseRunner",
+            "RecoveryRunner",
+            "PlaybackRunner",
+            "OverlayRunner"
+          ]
+        },
+        "execution_kind": {
+          "enum": [
+            "ONNX",
+            "CLASSICAL",
+            "PLAYBACK",
+            "COMPOSITE"
+          ]
+        },
+        "behavior_role": {
+          "enum": [
+            "LOCOMOTION",
+            "TRANSITION",
+            "BALANCE",
+            "POSE",
+            "RECOVERY",
+            "OVERLAY"
+          ]
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "abi_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "period_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "worker_budget_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "MODEL",
+            "TRAJECTORY",
+            "BUILTIN"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "MODEL",
+                  "TRAJECTORY"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "path",
+              "sha256"
+            ]
+          }
+        }
+      ]
+    },
+    "tensor_io": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inputs",
+        "outputs"
+      ],
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "dtype",
+              "shape",
+              "semantic"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dtype": {
+                "enum": [
+                  "FLOAT32",
+                  "FLOAT16",
+                  "INT8",
+                  "INT32"
+                ]
+              },
+              "shape": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "semantic": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "dtype",
+              "shape",
+              "semantic"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dtype": {
+                "enum": [
+                  "FLOAT32",
+                  "FLOAT16",
+                  "INT8",
+                  "INT32"
+                ]
+              },
+              "shape": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "semantic": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "obs_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "action_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "owns": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "predicates",
+        "max_duration_ms"
+      ],
+      "properties": {
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stable_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "predicates",
+        "max_duration_ms"
+      ],
+      "properties": {
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stable_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "predicates",
+        "max_duration_ms"
+      ],
+      "properties": {
+        "predicates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_duration_ms": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stable_ms": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "failure_target": {
+      "enum": [
+        "DAMPING",
+        "ESTOP",
+        "PHASE_FALLBACK",
+        "SAFE_HOLD_IF_VERIFIED"
+      ]
+    },
+    "golden": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "release_id"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "DISABLED",
+            "CANDIDATE",
+            "APPROVED"
+          ]
+        },
+        "release_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

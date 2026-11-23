@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tensor_name",
+    "tensor_index",
+    "joint_name",
+    "mode",
+    "unit",
+    "scale",
+    "default",
+    "raw_clip_min",
+    "raw_clip_max",
+    "activation",
+    "kp",
+    "kd",
+    "tau_ff",
+    "limit_profile",
+    "owns",
+    "sign"
+  ],
+  "properties": {
+    "tensor_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tensor_index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "joint_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "enum": [
+        "POSITION",
+        "VELOCITY",
+        "TORQUE"
+      ]
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scale": {
+      "type": "number",
+      "minimum": 0
+    },
+    "default": {
+      "type": "number"
+    },
+    "raw_clip_min": {
+      "type": "number"
+    },
+    "raw_clip_max": {
+      "type": "number"
+    },
+    "activation": {
+      "enum": [
+        "IDENTITY",
+        "TANH"
+      ]
+    },
+    "kp": {
+      "type": "number",
+      "minimum": 0
+    },
+    "kd": {
+      "type": "number",
+      "minimum": 0
+    },
+    "tau_ff": {
+      "type": "number"
+    },
+    "limit_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owns": {
+      "type": "boolean"
+    },
+    "sign": {
+      "enum": [
+        -1,
+        1
+      ]
+    }
+  }
+}

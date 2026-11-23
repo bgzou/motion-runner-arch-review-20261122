@@ -1,0 +1,17 @@
+tensor_name,tensor_index,joint_name,mode,unit,scale,default,raw_clip_min,raw_clip_max,activation,kp,kd,tau_ff,limit_profile,owns,sign
+demo_act,0,fl_hip,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,1,fl_thigh,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,2,fl_calf,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,3,fr_hip,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,-1
+demo_act,4,fr_thigh,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,5,fr_calf,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,6,rl_hip,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,7,rl_thigh,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,8,rl_calf,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,9,rr_hip,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,10,rr_thigh,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,11,rr_calf,POSITION,rad,1.0,0.0,-1.0,1.0,IDENTITY,10.0,1.0,0.0,demo_leg_limit,true,1
+demo_act,12,fl_wheel,VELOCITY,rad/s,1.0,0.0,-1.0,1.0,IDENTITY,0.0,0.0,0.0,demo_wheel_limit,true,1
+demo_act,13,fr_wheel,VELOCITY,rad/s,1.0,0.0,-1.0,1.0,IDENTITY,0.0,0.0,0.0,demo_wheel_limit,true,1
+demo_act,14,rl_wheel,VELOCITY,rad/s,1.0,0.0,-1.0,1.0,IDENTITY,0.0,0.0,0.0,demo_wheel_limit,true,1
+demo_act,15,rr_wheel,VELOCITY,rad/s,1.0,0.0,-1.0,1.0,IDENTITY,0.0,0.0,0.0,demo_wheel_limit,true,1

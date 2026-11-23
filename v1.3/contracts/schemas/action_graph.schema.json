@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collie ActionGraph V1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "cost",
+          "guard",
+          "max_duration_ms",
+          "on_timeout"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "guard": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_duration_ms": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "on_timeout": {
+            "enum": [
+              "DAMPING",
+              "ESTOP",
+              "PHASE_FALLBACK",
+              "SAFE_HOLD_IF_VERIFIED"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

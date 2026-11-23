@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tensor_name",
+    "index",
+    "block",
+    "element",
+    "source",
+    "source_field",
+    "joint_or_axis",
+    "unit",
+    "frame",
+    "transform",
+    "offset",
+    "scale",
+    "clip_min",
+    "clip_max",
+    "filter_id",
+    "history_lag",
+    "history_order",
+    "include_current",
+    "initial_fill",
+    "missing_policy_ref",
+    "dtype"
+  ],
+  "properties": {
+    "tensor_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "index": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "block": {
+      "type": "string",
+      "minLength": 1
+    },
+    "element": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_field": {
+      "type": "string",
+      "minLength": 1
+    },
+    "joint_or_axis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1
+    },
+    "frame": {
+      "type": "string",
+      "minLength": 1
+    },
+    "transform": {
+      "enum": [
+        "IDENTITY",
+        "CENTER_SCALE_CLIP",
+        "SCALE_CLIP",
+        "ANGLE_WRAP_SCALE_CLIP",
+        "QUAT_TO_GRAVITY_SCALE_CLIP"
+      ]
+    },
+    "offset": {
+      "type": "number"
+    },
+    "scale": {
+      "type": "number"
+    },
+    "clip_min": {
+      "type": "number"
+    },
+    "clip_max": {
+      "type": "number"
+    },
+    "filter_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "history_lag": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "history_order": {
+      "enum": [
+        "OLDEST_TO_NEWEST",
+        "NEWEST_TO_OLDEST"
+      ]
+    },
+    "include_current": {
+      "type": "boolean"
+    },
+    "initial_fill": {
+      "enum": [
+        "REPEAT_FIRST",
+        "ZEROS",
+        "REFERENCE",
+        "ASSET"
+      ]
+    },
+    "missing_policy_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dtype": {
+      "enum": [
+        "FLOAT32",
+        "FLOAT16",
+        "INT8",
+        "INT32"
+      ]
+    }
+  }
+}

@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Collie MC V1.2 · 架构评审（图解版）</title>
+<style>
+  :root{
+    --red:#c8102e; --red-soft:#fff2f4; --ink:#12202c; --muted:#5d6f7e;
+    --line:#d9e2e8; --bg:#f7f9fb; --blue:#0b63b6; --teal:#0f7f7a;
+    --amber:#a86512; --green:#2f7d52; --paper:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;background:#0b1118;color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",Arial,sans-serif;}
+  body{display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #stage{position:relative;width:min(98vw,calc(94vh * 16 / 9));aspect-ratio:16/9;background:var(--paper);
+    box-shadow:0 24px 80px #0009;overflow:hidden}
+  .slide{position:absolute;inset:0;display:none;padding:30px 44px 26px;grid-template-rows:auto auto 1fr auto;gap:10px;overflow:hidden;background:var(--paper)}
+  .slide.active{display:grid}
+  .top{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:14px;font-weight:700;letter-spacing:.04em}
+  .brand{display:flex;align-items:center;gap:10px}
+  .mark{width:20px;height:20px;background:var(--red);display:inline-block;clip-path:polygon(0 0,100% 0,100% 34%,35% 34%,35% 100%,0 100%)}
+  .tag{background:#f6eef0;color:#9d1027;border-radius:6px;padding:6px 12px}
+  h1{font-size:clamp(26px,3.1vw,46px);line-height:1.08;letter-spacing:-.035em;margin:2px 0 0;font-weight:850}
+  .sub{margin:4px 0 0;color:var(--muted);font-size:clamp(15px,1.5vw,21px);line-height:1.3}
+  .body{min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  svg.diagram{width:100%;height:100%;max-height:100%;display:block}
+  .foot{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:7px;color:#7b8a96;font-size:12px;font-weight:600}
+  .notes{display:none;position:absolute;left:4%;right:4%;bottom:5%;max-height:34%;overflow:auto;background:#fffbea;border:1px solid #eedc9a;border-left:6px solid var(--amber);border-radius:8px;padding:14px 18px;font-size:15px;line-height:1.45;z-index:8;box-shadow:0 8px 30px #0003}
+  .notes b{color:var(--amber)}
+  body.show-notes .slide.active .notes{display:block}
+  body.show-notes .slide.active .body{opacity:.18}
+  #hud{position:fixed;left:0;right:0;bottom:0;height:42px;background:#0d151d;color:#c7d3dc;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;z-index:20}
+  #hud button{background:#1a2733;color:#dbe6ee;border:1px solid #2c3e4d;border-radius:6px;padding:5px 10px;margin-left:6px;cursor:pointer;font:inherit}
+  #hud button:hover{background:#243645}
+  #progress{position:fixed;left:0;bottom:42px;height:3px;background:var(--red);width:0;z-index:21}
+  #overview{position:fixed;inset:0;background:#0b1118ee;z-index:30;display:none;overflow:auto;padding:40px}
+  #overview.open{display:block}
+  #overview h2{color:#fff;font-size:22px;margin:0 0 18px}
+  #overview .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  #overview button{text-align:left;background:#15222d;border:1px solid #2a3c4a;border-radius:8px;color:#d8e4ec;padding:12px;cursor:pointer;font:inherit;min-height:86px}
+  #overview button:hover{border-color:var(--red)}
+  #overview small{display:block;color:#8fa3b3;margin-bottom:6px}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  /* matrix slide */
+  .matrix-wrap{width:100%;display:flex;flex-direction:column;gap:10px}
+  .matrix{width:100%;border-collapse:collapse;table-layout:fixed;font-size:clamp(12px,1.15vw,17px)}
+  .matrix th,.matrix td{border:1px solid var(--line);padding:8px 7px;text-align:center;vertical-align:middle}
+  .matrix th{background:#f1f5f7;color:#324553;font-weight:800}
+  .matrix td:first-child,.matrix th:first-child{background:#f7f9fa;text-align:left;font-weight:750;width:13%}
+  .matrix .yes{background:#eaf6ef;color:#23653f;font-weight:750}
+  .matrix .shared{background:#fff4e2;color:#8a5410;font-weight:750}
+  .matrix .no{color:#a6b3bd}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chip{border:1px solid #e6b8c2;background:#fff3f5;color:#8e1025;border-radius:999px;padding:5px 11px;font-size:clamp(11px,1vw,14px);font-weight:750}
+  /* cards slide */
+  .cards{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{border:1px solid var(--line);border-left:5px solid var(--red);border-radius:9px;background:#fbfcfd;padding:13px 16px}
+  .card h3{margin:0 0 6px;font-size:clamp(15px,1.3vw,20px);color:#1a2b38}
+  .card p{margin:0;color:var(--muted);font-size:clamp(12px,1.05vw,16px);line-height:1.38}
+  .card.warn{border-left-color:var(--amber)}
+  .edge-label{paint-order:stroke;stroke:#fff;stroke-width:5;stroke-linejoin:round}
+  .card.ok{border-left-color:var(--green)}
+  @media print{
+    @page{size:16in 9in;margin:0}
+    html,body{background:#fff;overflow:visible;height:auto}
+    #stage{width:100%;height:auto;box-shadow:none;aspect-ratio:auto}
+    .slide{display:grid !important;position:relative;inset:auto;width:16in;height:9in;page-break-after:always;padding:30px 44px}
+    #hud,#progress,#overview,.notes{display:none !important}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5d6f7e"/></marker>
+  <marker id="arRed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c8102e"/></marker>
+  <marker id="arBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0b63b6"/></marker>
+  <marker id="arTeal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0f7f7a"/></marker>
+  <marker id="arAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#a86512"/></marker>
+</defs></svg>
+
+<main id="stage">
+
+<!-- 1 -->
+<section class="slide active" data-title="封面：一个关节出口，四条保护线" data-chapter="开场">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">V1.2 · 图解版</div></div>
+  <h1>一个关节出口，四条保护线</h1>
+  <p class="sub">Collie MC 架构评审 · 从“站起来”到“一条安全关节命令”</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 470" role="img" aria-label="五层架构总览">
+      <rect x="60" y="30" width="1080" height="400" rx="18" fill="#f8fafc" stroke="#dbe4ea"/>
+      <text x="90" y="70" font-size="18" fill="#5d6f7e" font-weight="700">Task / Nav / Safety</text>
+      <text x="90" y="96" font-size="15" fill="#8fa0ad">意图、速度、许可</text>
+      <g font-size="22" font-weight="800" fill="#12202c">
+        <rect x="90" y="130" width="360" height="64" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/><text x="112" y="170">① 编排 · Gateway</text>
+        <rect x="510" y="130" width="360" height="64" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/><text x="532" y="170">② 计算 · Worker 50 Hz</text>
+        <rect x="90" y="240" width="360" height="64" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/><text x="112" y="280">③ 实时 · mc_rt 200 Hz</text>
+        <rect x="510" y="240" width="360" height="64" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/><text x="532" y="280">④ 设备 · HAL / 驱动</text>
+        <rect x="900" y="130" width="200" height="174" rx="12" fill="#fff7e8" stroke="#a86512" stroke-width="2"/><text x="920" y="170" font-size="19">SafetyKernel</text><text x="920" y="200" font-size="15" fill="#8a5a12">SafetyLease</text><text x="920" y="230" font-size="15" fill="#8a5a12">故障锁存</text><text x="920" y="270" font-size="14" fill="#8a5a12">只收紧，不抢写</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)">
+        <path d="M270,194 L270,240"/><path d="M270,304 L270,340"/><path d="M450,162 L510,162"/><path d="M690,194 L690,240"/><path d="M870,272 L900,230"/>
+      </g>
+      <g stroke="#0b63b6" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#arBlue)"><path d="M450,280 C520,320 610,320 690,304"/></g>
+      <g stroke="#0f7f7a" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#arTeal)"><path d="M510,330 C430,370 340,370 270,304"/></g>
+      <g stroke="#c8102e" stroke-width="2.5" fill="none" marker-end="url(#arRed)"><path d="M690,304 L690,360 L270,360 L270,304"/></g>
+      <text x="95" y="378" font-size="16" fill="#0b63b6" font-weight="700">Velocity 流（10–50 Hz + TTL）</text>
+      <text x="430" y="378" font-size="16" fill="#0f7f7a" font-weight="700">Feedback 流（200–1000 Hz）</text>
+      <text x="780" y="378" font-size="16" fill="#c8102e" font-weight="700">Action 流 / 唯一出口</text>
+      <rect x="90" y="405" width="720" height="4" fill="#c8102e"/><text x="830" y="412" font-size="14" fill="#5d6f7e">三时钟：100 / 200 / ~1000 Hz</text>
+    </svg>
+  </div>
+  <div class="foot"><span>V1.2 架构讲解 · 非实机批准</span><span>01 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>先讲一句话——任务想做的是“站起来/跟我走”，不等于电机可以直接照做。中间有编排、计算、实时出口、设备四道关，Safety 是横着约束的第五条线。这页只建立五个盒子，不展开。</aside>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="五层主图：四流、三时钟、一条铁律" data-chapter="总体架构">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">总体架构</div></div>
+  <h1>先背这张大图</h1>
+  <p class="sub">五层、四流、三时钟、一条铁律</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 540" role="img" aria-label="五层、四流、三时钟">
+      <g font-size="17">
+        <rect x="50" y="30" width="760" height="68" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="72" y="58" font-size="22" font-weight="800" fill="#12202c">① 意图/权限</text><text x="72" y="83" fill="#5d6f7e">Task · Nav · Safety · Session · ControlLease</text>
+        <rect x="50" y="128" width="760" height="68" rx="10" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="72" y="156" font-size="22" font-weight="800" fill="#12202c">② 编排</text><text x="72" y="181" fill="#5d6f7e">Gateway · PolicyManager · ActionGraph · Bundle</text>
+        <rect x="50" y="226" width="760" height="68" rx="10" fill="#fff" stroke="#0b63b6" stroke-width="2"/>
+        <text x="72" y="254" font-size="22" font-weight="800" fill="#12202c">③ 计算 50 Hz</text><text x="72" y="279" fill="#5d6f7e">Worker · ObsSpec · Runner · Inference · Codec</text>
+        <rect x="50" y="324" width="760" height="68" rx="10" fill="#fff" stroke="#c8102e" stroke-width="3"/>
+        <text x="72" y="352" font-size="22" font-weight="800" fill="#12202c">④ 实时执行 200 Hz</text><text x="72" y="377" fill="#5d6f7e">mc_rt · Snapshot · Arbiter · Epoch · JointMux · OutputGuard</text>
+        <rect x="50" y="422" width="760" height="68" rx="10" fill="#fff" stroke="#0f7f7a" stroke-width="2"/>
+        <text x="72" y="450" font-size="22" font-weight="800" fill="#12202c">⑤ 设备目标 ~1 kHz</text><text x="72" y="475" fill="#5d6f7e">HAL · 驱动 · 电机/轮 · IMU</text>
+      </g>
+      <g stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)">
+        <path d="M430,98 L430,128"/><path d="M430,196 L430,226"/><path d="M430,294 L430,324"/><path d="M430,392 L430,422"/>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)">
+        <path d="M50,450 C10,450 10,254 50,254"/>
+      </g>
+      <text x="8" y="350" font-size="15" fill="#0f7f7a" transform="rotate(-90 8,350)">Feedback</text>
+      <g font-size="16">
+        <rect x="850" y="128" width="300" height="110" rx="12" fill="#fff7e8" stroke="#a86512" stroke-width="2"/>
+        <text x="872" y="160" font-size="20" font-weight="800" fill="#7a4b0d">mc_safety</text>
+        <text x="872" y="188" fill="#8a5a12">SafetyLease 30 ms【建议】</text>
+        <text x="872" y="214" fill="#8a5a12">严重故障异步撤销</text>
+        <path d="M850,210 C810,210 810,358 810,358" stroke="#a86512" stroke-width="3" fill="none" marker-end="url(#arAmber)"/>
+        <rect x="850" y="422" width="300" height="68" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="872" y="452" font-size="20" font-weight="800" fill="#8e1025">硬件急停 / 安全链</text>
+        <text x="872" y="477" fill="#8e1025">不经过 Worker / RT / ONNX</text>
+        <path d="M850,456 C810,456 810,456 810,456" stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)"/>
+      </g>
+      <g font-size="15" fill="#5d6f7e">
+        <text x="850" y="80">四流：Action / Velocity / Feedback / Safety</text>
+        <text x="850" y="105">铁律：只有 mc_rt 可写正常 HalCommand</text>
+        <text x="850" y="390">50/200/1k 均为建议/待测，不是实测值</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>五层 · 四流 · 三时钟</span><span>02 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这页是全场的地图。五层不是五个进程；四流是 Action、Velocity、Feedback、Safety；三时钟是 50/200/1k。铁律只有一句：只有 mc_rt 能写正常 HAL。频率全部是建议值，别讲成实测。</aside>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="四进程：谁算、谁发、谁保护" data-chapter="部署">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">部署</div></div>
+  <h1>四进程，一个出口</h1>
+  <p class="sub">Worker 可以挂，RT 不能等，HAL 可以独立拒收</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="四进程与 HAL 连接">
+      <g font-size="16">
+        <rect x="40" y="90" width="190" height="120" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="60" y="124" font-size="21" font-weight="800">mc_gateway</text><text x="60" y="153" fill="#5d6f7e">API · PolicyManager</text><text x="60" y="178" fill="#5d6f7e">Graph · Registry</text><text x="60" y="200" fill="#8fa0ad" font-size="14">非实时</text>
+        <rect x="280" y="90" width="190" height="120" rx="12" fill="#fff" stroke="#0b63b6" stroke-width="2"/>
+        <text x="300" y="124" font-size="21" font-weight="800">Worker</text><text x="300" y="153" fill="#5d6f7e">Obs / Runner</text><text x="300" y="178" fill="#5d6f7e">Inference / Codec</text><text x="300" y="200" fill="#8fa0ad" font-size="14">50 Hz · 20 ms</text>
+        <rect x="520" y="90" width="190" height="120" rx="12" fill="#fff" stroke="#c8102e" stroke-width="3"/>
+        <text x="540" y="124" font-size="21" font-weight="800">mc_rt</text><text x="540" y="153" fill="#5d6f7e">Snapshot / Mux</text><text x="540" y="178" fill="#5d6f7e">Epoch / Guard</text><text x="540" y="200" fill="#8fa0ad" font-size="14">200 Hz · 5 ms</text>
+        <rect x="760" y="90" width="190" height="120" rx="12" fill="#fff" stroke="#a86512" stroke-width="2"/>
+        <text x="780" y="124" font-size="21" font-weight="800">mc_safety</text><text x="780" y="153" fill="#5d6f7e">SafetyKernel</text><text x="780" y="178" fill="#5d6f7e">Lease / Fault</text><text x="780" y="200" fill="#8fa0ad" font-size="14">100 Hz · S0</text>
+        <rect x="1000" y="90" width="160" height="120" rx="12" fill="#fff" stroke="#0f7f7a" stroke-width="2"/>
+        <text x="1020" y="124" font-size="21" font-weight="800">HAL</text><text x="1020" y="153" fill="#5d6f7e">设备合同</text><text x="1020" y="178" fill="#5d6f7e">watchdog</text><text x="1020" y="200" fill="#8fa0ad" font-size="14">~1 kHz</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="2.5" fill="none" marker-end="url(#ar)">
+        <path d="M230,135 L280,135"/><path d="M470,150 L520,150"/><path d="M710,150 L760,150"/><path d="M950,150 L1000,150"/>
+      </g>
+      <g stroke="#0b63b6" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#arBlue)">
+        <path d="M520,178 C470,230 470,230 470,178"/><path d="M520,205 C400,260 400,260 400,205"/>
+      </g>
+      <g stroke="#0f7f7a" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#arTeal)"><path d="M1000,205 C900,260 750,260 710,205"/></g>
+      <g stroke="#a86512" stroke-width="2.5" fill="none" marker-end="url(#arAmber)"><path d="M760,120 C720,70 650,70 610,90"/></g>
+      <text x="255" y="126" font-size="13" fill="#5d6f7e" text-anchor="middle" class="edge-label">preload</text>
+      <text x="495" y="140" font-size="13" fill="#5d6f7e" text-anchor="middle" class="edge-label">candidate</text>
+      <text x="735" y="140" font-size="13" fill="#c8102e" text-anchor="middle" class="edge-label">COMMIT</text>
+      <text x="975" y="140" font-size="13" fill="#0f7f7a" text-anchor="middle" class="edge-label">HalCommand</text>
+      <text x="480" y="275" font-size="12" fill="#0b63b6" text-anchor="middle" class="edge-label">snapshot / exit decision</text>
+      <text x="800" y="275" font-size="12" fill="#0f7f7a" text-anchor="middle" class="edge-label">joint / IMU feedback</text>
+      <text x="620" y="70" font-size="12" fill="#a86512" text-anchor="middle" class="edge-label">SafetyLease / revoke</text>
+      <g font-size="16" fill="#12202c">
+        <rect x="40" y="330" width="540" height="115" rx="12" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="62" y="362" font-size="19" font-weight="800" fill="#c8102e">一个出口</text>
+        <text x="62" y="390" fill="#5d6f7e">Gateway 只能提交切换请求；Worker 只能提候选；Safety 只能撤许可；</text>
+        <text x="62" y="416" fill="#5d6f7e">只有 mc_rt 能发正常 HalCommand；HAL 可以独立拒收/保护。</text>
+        <rect x="620" y="330" width="540" height="115" rx="12" fill="#fff2f4" stroke="#e6b8c2"/>
+        <text x="642" y="362" font-size="19" font-weight="800" fill="#8e1025">故障隔离</text>
+        <text x="642" y="390" fill="#8e1025">Worker 挂 → 候选过期，RT 不等；RT 挂 → HAL watchdog；</text>
+        <text x="642" y="416" fill="#8e1025">Safety 挂 → Lease 到期；HAL 挂 → 驱动/硬件急停。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>进程 ≠ 模块 ≠ 线程</span><span>03 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>四个 MC 进程加 HAL。Gateway 是前台/调度；Worker 是后厨，可以慢但不能阻塞出菜口；RT 是出菜口/最后质检，200 Hz 必须准时；Safety 是安全员，只能否决不能抢写；HAL 是司机，能独立拒收。只要记住“一个出口”。</aside>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="三时钟：50 / 200 / 1000 Hz 不是同步函数" data-chapter="时序">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">时钟</div></div>
+  <h1>三个时钟，不是一次同步调用</h1>
+  <p class="sub">Worker 20 ms 出候选；RT 5 ms 自己跑；HAL 约 1 ms 执行</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="50Hz 200Hz 1kHz 时间轴">
+      <g font-size="14" fill="#7b8a96">
+        <text x="40" y="20">时间（ms）</text>
+        <text x="120" y="36">0</text><text x="320" y="36">8</text><text x="520" y="36">16</text><text x="720" y="36">24</text><text x="920" y="36">32</text><text x="1120" y="36">40</text>
+        <g stroke="#e6edf2" stroke-width="1">
+          <path d="M120,50 L120,450"/><path d="M220,50 L220,450"/><path d="M320,50 L320,450"/><path d="M420,50 L420,450"/><path d="M520,50 L520,450"/><path d="M620,50 L620,450"/><path d="M720,50 L720,450"/><path d="M820,50 L820,450"/><path d="M920,50 L920,450"/><path d="M1020,50 L1020,450"/><path d="M1120,50 L1120,450"/>
+        </g>
+      </g>
+      <g font-size="15">
+        <text x="40" y="105" font-weight="800" fill="#0b63b6">Worker</text>
+        <rect x="120" y="80" width="375" height="42" rx="8" fill="#eaf3ff" stroke="#0b63b6"/>
+        <text x="138" y="107" fill="#0b63b6">obs + inference + codec（预算 ≤15 ms）</text>
+        <rect x="620" y="80" width="375" height="42" rx="8" fill="#eaf3ff" stroke="#0b63b6"/>
+        <text x="638" y="107" fill="#0b63b6">下一拍：20–35 ms</text>
+        <text x="40" y="205" font-weight="800" fill="#c8102e">mc_rt</text>
+        <g fill="#fff2f4" stroke="#c8102e">
+          <rect x="120" y="180" width="64" height="42" rx="7"/><rect x="245" y="180" width="64" height="42" rx="7"/><rect x="370" y="180" width="64" height="42" rx="7"/><rect x="495" y="180" width="64" height="42" rx="7"/><rect x="620" y="180" width="64" height="42" rx="7"/>
+        </g>
+        <text x="140" y="207" fill="#8e1025">R0</text><text x="265" y="207" fill="#8e1025">R1</text><text x="390" y="207" fill="#8e1025">R2</text><text x="515" y="207" fill="#8e1025">R3</text><text x="640" y="207" fill="#8e1025">R4</text>
+        <text x="40" y="305" font-weight="800" fill="#0f7f7a">HAL</text>
+        <g stroke="#0f7f7a" stroke-width="2">
+          <path d="M120,305 L1120,305" opacity=".25"/>
+          <path d="M120,280 L120,330"/><path d="M145,280 L145,330"/><path d="M170,280 L170,330"/><path d="M195,280 L195,330"/><path d="M220,280 L220,330"/><path d="M245,280 L245,330"/><path d="M270,280 L270,330"/><path d="M295,280 L295,330"/><path d="M320,280 L320,330"/><path d="M345,280 L345,330"/><path d="M370,280 L370,330"/><path d="M395,280 L395,330"/><path d="M420,280 L420,330"/><path d="M445,280 L445,330"/><path d="M470,280 L470,330"/><path d="M495,280 L495,330"/><path d="M520,280 L520,330"/><path d="M545,280 L545,330"/><path d="M570,280 L570,330"/><path d="M595,280 L595,330"/><path d="M620,280 L620,330"/><path d="M645,280 L645,330"/><path d="M670,280 L670,330"/><path d="M695,280 L695,330"/><path d="M720,280 L720,330"/>
+        </g>
+        <text x="40" y="390" font-size="15" fill="#5d6f7e">候选在 15 ms 内产生，RT 在 5/10/15/20 ms 拍边界只读“当前仍有效”的候选；</text>
+        <text x="40" y="415" font-size="15" fill="#5d6f7e">一个策略周期 20 ms = 4 个 RT tick；RT 不等待推理，HAL 在设备周期内独立执行/保护。</text>
+      </g>
+      <g stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)"><path d="M495,101 L620,180"/></g>
+      <text x="500" y="150" font-size="14" fill="#c8102e">15 ms 候选 → 下一拍可用</text>
+      <text x="520" y="260" font-size="14" fill="#8e1025">RT 每 5 ms 自行运行（4 tick / 策略周期）</text>
+      <text x="760" y="350" font-size="14" fill="#0f7f7a">设备 1 ms 级目标【待定】</text>
+    </svg>
+  </div>
+  <div class="foot"><span>50/200/1k 是建议目标，不是实测</span><span>04 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>三个周期独立：Worker 20 ms 出一次候选，RT 每 5 ms 自己跑，HAL 1 ms 级执行。50 Hz 策略下一个目标保持 4 个 RT tick，这是 ZOH，不是插值。RT 不会等到 15 ms 才动；它只读当前仍有效的候选，过期就丢。</aside>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="领域模型：Behavior → Action → Bundle → Runner" data-chapter="领域模型">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">领域模型</div></div>
+  <h1>从“产品能力”拆到“执行单元”</h1>
+  <p class="sub">Behavior 是能力，Action 是定义，Bundle 是组合，Runner 是算法</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="领域模型链">
+      <g font-size="17">
+        <rect x="40" y="120" width="180" height="100" rx="12" fill="#fff2f4" stroke="#c8102e" stroke-width="2"/>
+        <text x="60" y="155" font-size="21" font-weight="800">Behavior</text><text x="60" y="182" fill="#5d6f7e">用户要什么</text><text x="60" y="205" fill="#8fa0ad" font-size="14">“跟我走”</text>
+        <rect x="270" y="120" width="180" height="100" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="290" y="155" font-size="21" font-weight="800">Action</text><text x="290" y="182" fill="#5d6f7e">执行哪个定义</text><text x="290" y="205" fill="#8fa0ad" font-size="14">quad_drive</text>
+        <rect x="500" y="120" width="180" height="100" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="520" y="155" font-size="21" font-weight="800">ActionBundle</text><text x="520" y="182" fill="#5d6f7e">主任务 + 叠加</text><text x="520" y="205" fill="#8fa0ad" font-size="14">primary/overlay/owns</text>
+        <rect x="730" y="120" width="180" height="100" rx="12" fill="#fff" stroke="#0b63b6" stroke-width="2"/>
+        <text x="750" y="155" font-size="21" font-weight="800">Runner</text><text x="750" y="182" fill="#5d6f7e">每拍怎么计算</text><text x="750" y="205" fill="#8fa0ad" font-size="14">候选，不写 HAL</text>
+        <rect x="960" y="120" width="200" height="100" rx="12" fill="#eef8f7" stroke="#0f7f7a" stroke-width="2"/>
+        <text x="980" y="155" font-size="21" font-weight="800">Candidate</text><text x="980" y="182" fill="#5d6f7e">交给 RT 的目标</text><text x="980" y="205" fill="#8fa0ad" font-size="14">epoch/deadline/mask</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M220,170 L270,170"/><path d="M450,170 L500,170"/><path d="M680,170 L730,170"/><path d="M910,170 L960,170"/></g>
+      <g font-size="15">
+        <rect x="500" y="290" width="180" height="70" rx="10" fill="#f8fafc" stroke="#d9e2e8"/><text x="520" y="318" font-weight="800">ActionGraph</text><text x="520" y="342" fill="#5d6f7e">合法路径</text>
+        <rect x="730" y="290" width="180" height="70" rx="10" fill="#f8fafc" stroke="#d9e2e8"/><text x="750" y="318" font-weight="800">RunnerManifest</text><text x="750" y="342" fill="#5d6f7e">加载/输出合同</text>
+        <rect x="960" y="290" width="200" height="70" rx="10" fill="#f8fafc" stroke="#d9e2e8"/><text x="980" y="318" font-weight="800">Obs/ActionSpec</text><text x="980" y="342" fill="#5d6f7e">逐维配方</text>
+        <rect x="270" y="290" width="180" height="70" rx="10" fill="#fff7e8" stroke="#a86512"/><text x="290" y="318" font-weight="800">ControlLease</text><text x="290" y="342" fill="#8a5a12">谁有运动资源</text>
+        <rect x="40" y="290" width="180" height="70" rx="10" fill="#fff7e8" stroke="#a86512"/><text x="60" y="318" font-weight="800">Session</text><text x="60" y="342" fill="#8a5a12">你是谁</text>
+      </g>
+      <g stroke="#9fb0bd" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)"><path d="M590,290 L590,220"/><path d="M820,290 L820,220"/><path d="M1060,290 L1060,220"/><path d="M360,290 L360,220"/><path d="M130,290 L130,220"/></g>
+      <text x="40" y="420" font-size="17" fill="#5d6f7e">同一个“跟我走”可以从经典轮驱换成 ONNX，Behavior/Action 接口不变；变的是 Bundle 里的 Runner 与资产。</text>
+    </svg>
+  </div>
+  <div class="foot"><span>Behavior 稳定，Runner 可替换</span><span>05 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>产品说的是“跟我走”，这是 Behavior；系统里注册成 Action；一个 Action 可以由主 Runner 加可选 Overlay 组成，这是 Bundle；Runner 才是每拍算候选的单元。Manifest/Spec/Lease 都是挂在链上的合同，不是另一个 Runner。</aside>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="五个责任区：不是五个进程" data-chapter="领域模型">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">责任区</div></div>
+  <h1>五个责任区，不是五个进程</h1>
+  <p class="sub">每个区对一个问题说了算，用一个请求穿过它</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 480" role="img" aria-label="五个责任区">
+      <g font-size="15">
+        <rect x="30" y="80" width="210" height="190" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="50" y="115" font-size="19" font-weight="800">Motion API</text><text x="50" y="145" fill="#c8102e" font-weight="700">谁请求？有权吗？</text><text x="50" y="175" fill="#5d6f7e">Session</text><text x="50" y="200" fill="#5d6f7e">ActionRequest</text><text x="50" y="225" fill="#8fa0ad">不管关节</text>
+        <rect x="270" y="80" width="210" height="190" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="290" y="115" font-size="19" font-weight="800">Orchestration</text><text x="290" y="145" fill="#c8102e" font-weight="700">从哪到哪？</text><text x="290" y="175" fill="#5d6f7e">PolicyManager</text><text x="290" y="200" fill="#5d6f7e">ActionGraph/Bundle</text><text x="290" y="225" fill="#8fa0ad">不直接提交</text>
+        <rect x="510" y="80" width="210" height="190" rx="12" fill="#fff" stroke="#0b63b6" stroke-width="2"/>
+        <text x="530" y="115" font-size="19" font-weight="800">Runner Runtime</text><text x="530" y="145" fill="#0b63b6" font-weight="700">每拍怎么算？</text><text x="530" y="175" fill="#5d6f7e">Runner/Manifest</text><text x="530" y="200" fill="#5d6f7e">Obs/ActionSpec</text><text x="530" y="225" fill="#8fa0ad">不写 HAL</text>
+        <rect x="750" y="80" width="210" height="190" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="770" y="115" font-size="19" font-weight="800">Joint Control</text><text x="770" y="145" fill="#c8102e" font-weight="700">本拍发什么？</text><text x="770" y="175" fill="#5d6f7e">Snapshot/Epoch</text><text x="770" y="200" fill="#5d6f7e">JointMux/Guard</text><text x="770" y="225" fill="#8fa0ad">不做业务</text>
+        <rect x="990" y="80" width="180" height="190" rx="12" fill="#fff7e8" stroke="#a86512" stroke-width="2"/>
+        <text x="1010" y="115" font-size="19" font-weight="800">Motion Safety</text><text x="1010" y="145" fill="#a86512" font-weight="700">还能动吗？</text><text x="1010" y="175" fill="#8a5a12">SafetyKernel</text><text x="1010" y="200" fill="#8a5a12">SafetyLease</text><text x="1010" y="225" fill="#8a5a12">只收紧</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M240,160 L270,160"/><path d="M480,160 L510,160"/><path d="M720,160 L750,160"/><path d="M960,160 L990,160"/></g>
+      <g font-size="14" fill="#5d6f7e">
+        <text x="40" y="320">一个 SetBehavior 依次穿过：身份 → 编排 → 候选 → 关节执行；Safety 横向约束全程。</text>
+        <text x="40" y="350">限界上下文 = 语义/所有权边界；进程 = 故障隔离边界；线程 = 调度单位；不要求数量一一对应。</text>
+      </g>
+      <g>
+        <rect x="30" y="385" width="1140" height="55" rx="10" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="52" y="419" font-size="16" fill="#12202c" font-weight="700">五区 ≠ 五服务：V1.1 实际是四个 MC 进程 + HAL；一个上下文可以跨进程，一个进程也可以承载多个模块。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>语义边界 ≠ 部署边界</span><span>06 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>“限界上下文”不用讲 DDD。就说五个部门：接待、调度、后厨、出菜口、安全员。每个部门只回答一个问题，交接有单据。它们不要求是五个微服务；V1.1 是四个 MC 进程加 HAL。</aside>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="RunnerManifest：身份证 + 菜谱 + 守卫 + 验收单" data-chapter="策略资产">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">策略资产</div></div>
+  <h1>Manifest 不是模型文件</h1>
+  <p class="sub">它回答：我是谁、读什么、写哪些关节、何时能进出、失败去哪</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="RunnerManifest 关系图">
+      <rect x="380" y="170" width="440" height="150" rx="16" fill="#fff2f4" stroke="#c8102e" stroke-width="3"/>
+      <text x="405" y="210" font-size="25" font-weight="850" fill="#8e1025">RunnerManifest</text>
+      <text x="405" y="242" font-size="15" fill="#5d6f7e">静态加载合同：身份 · 机制/角色 · 资产 · 规格 · 守卫 · 验收</text>
+      <text x="405" y="270" font-size="15" fill="#8e1025">release=CANDIDATE 时不可运动</text>
+      <text x="405" y="296" font-size="14" fill="#8fa0ad">Manifest ≠ ONNX；≠ Graph；≠ RobotDescription</text>
+      <g font-size="15">
+        <rect x="40" y="70" width="280" height="70" rx="10" fill="#fff" stroke="#0b63b6"/><text x="60" y="100" font-weight="800" fill="#0b63b6">RobotDescription</text><text x="60" y="124" fill="#5d6f7e">关节名/方向/限位/标定</text>
+        <rect x="880" y="70" width="280" height="70" rx="10" fill="#fff" stroke="#0b63b6"/><text x="900" y="100" font-weight="800" fill="#0b63b6">Asset</text><text x="900" y="124" fill="#5d6f7e">ONNX / 轨迹 / BUILTIN</text>
+        <rect x="880" y="325" width="280" height="70" rx="10" fill="#fff" stroke="#0f7f7a"/><text x="900" y="355" font-weight="800" fill="#0f7f7a">ObsSpec / ActionSpec</text><text x="900" y="379" fill="#5d6f7e">逐维输入/输出配方</text>
+        <rect x="40" y="325" width="280" height="70" rx="10" fill="#fff" stroke="#0f7f7a"/><text x="60" y="355" font-weight="800" fill="#0f7f7a">Tensor IO / Golden</text><text x="60" y="379" fill="#5d6f7e">name/shape/dtype/回归</text>
+        <rect x="380" y="380" width="440" height="66" rx="10" fill="#fff7e8" stroke="#a86512"/><text x="400" y="408" font-weight="800" fill="#7a4b0d">entry / exit / completion / failure_target</text><text x="400" y="432" fill="#8a5a12">何时可进、可出、算稳；失败去 DAMPING/ESTOP/PHASE_FALLBACK</text>
+      </g>
+      <g stroke="#9fb0bd" stroke-width="2.5" fill="none" stroke-dasharray="6 4" marker-end="url(#ar)">
+        <path d="M320,105 L380,190"/><path d="M880,105 L820,190"/><path d="M880,360 L820,280"/><path d="M320,360 L380,280"/><path d="M600,380 L600,320"/>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>Manifest 是“身份证+菜谱+守卫+验收单”</span><span>07 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>只给一个 ONNX，软件不知道第 34 维是轮速还是 IMU、输出哪个关节、什么形态能进、失败去哪。Manifest 就是把这些静态合同一次说清；它不是模型本体，也不是 Graph，也不是本体描述。缺任何一项都应该拒绝加载。</aside>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="八类 Runner：4×6 是坐标，不是 24 个实现" data-chapter="Runner">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">Runner</div></div>
+  <h1>八类 Runner ≠ 24 种算法</h1>
+  <p class="sub">先选执行机制，再选行为角色；组合只能查注册表</p>
+  <div class="body">
+    <div class="matrix-wrap">
+      <table class="matrix">
+        <tr><th>执行机制 \ 角色</th><th>LOCOMOTION</th><th>TRANSITION</th><th>BALANCE</th><th>POSE</th><th>RECOVERY</th><th>OVERLAY</th></tr>
+        <tr><td>ONNX</td><td class="yes">RlLocomotionRunner</td><td class="shared">TransitionRunner</td><td class="yes">BalanceRunner</td><td class="no">—</td><td class="yes">RecoveryRunner</td><td class="yes">OverlayRunner</td></tr>
+        <tr><td>CLASSICAL</td><td class="yes">WheelDriveRunner</td><td class="shared">TransitionRunner</td><td class="yes">BalanceRunner</td><td class="yes">ClassicalPoseRunner</td><td class="yes">RecoveryRunner</td><td class="yes">OverlayRunner</td></tr>
+        <tr><td>PLAYBACK</td><td class="no">—</td><td class="shared">TransitionRunner</td><td class="no">—</td><td class="yes">PlaybackRunner</td><td class="no">—</td><td class="yes">OverlayRunner</td></tr>
+        <tr><td>COMPOSITE</td><td class="no">—</td><td class="shared">TransitionRunner</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="yes">OverlayRunner</td></tr>
+      </table>
+      <div class="chips">
+        <span class="chip">经典四轮 → CLASSICAL/LOCOMOTION → WheelDriveRunner</span>
+        <span class="chip">RL 四轮 → ONNX/LOCOMOTION → RlLocomotionRunner</span>
+        <span class="chip">Q2B/B2Q → */TRANSITION → TransitionRunner</span>
+        <span class="chip">双足平衡 → */BALANCE → BalanceRunner</span>
+        <span class="chip">站姿 → CLASSICAL/POSE → ClassicalPoseRunner</span>
+        <span class="chip">手势 → */OVERLAY → OverlayRunner</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>4×6 是坐标；同一格可复用同一个类、不同 backend</span><span>08 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这页回答“为什么八类却像不止八种”。八类是八个类名；4×6 是坐标表。大多数格子没有实现，TransitionRunner 被多个机制复用。选类靠 `(execution_kind, behavior_role)` 唯一切换，不靠类名猜。Q2B/Balance 当前禁用。</aside>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="一拍数据链：20 ms 计算、5 ms 发令" data-chapter="数据链">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">数据链</div></div>
+  <h1>一拍：7 个节点，两个时钟</h1>
+  <p class="sub">HAL 反馈 → Snapshot → Obs → 推理 → Codec → Mux/Guard → HalCommand</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 470" role="img" aria-label="每拍数据链">
+      <g font-size="15">
+        <rect x="30" y="80" width="150" height="70" rx="10" fill="#eef8f7" stroke="#0f7f7a"/><text x="50" y="112" font-weight="800" fill="#0f7f7a">HAL 反馈</text><text x="50" y="136" fill="#5d6f7e">joint/IMU/stamp</text>
+        <rect x="220" y="80" width="150" height="70" rx="10" fill="#fff2f4" stroke="#c8102e"/><text x="240" y="112" font-weight="800" fill="#8e1025">Snapshot</text><text x="240" y="136" fill="#5d6f7e">同拍不可变</text>
+        <rect x="410" y="80" width="150" height="70" rx="10" fill="#eaf3ff" stroke="#0b63b6"/><text x="430" y="112" font-weight="800" fill="#0b63b6">Obs + 历史</text><text x="430" y="136" fill="#5d6f7e">逐维配方</text>
+        <rect x="600" y="80" width="150" height="70" rx="10" fill="#eaf3ff" stroke="#0b63b6"/><text x="620" y="112" font-weight="800" fill="#0b63b6">推理</text><text x="620" y="136" fill="#5d6f7e">命名张量</text>
+        <rect x="790" y="80" width="150" height="70" rx="10" fill="#fff2f4" stroke="#c8102e"/><text x="810" y="112" font-weight="800" fill="#8e1025">Codec</text><text x="810" y="136" fill="#5d6f7e">规范关节目标</text>
+        <rect x="980" y="80" width="180" height="70" rx="10" fill="#fff2f4" stroke="#c8102e"/><text x="1000" y="112" font-weight="800" fill="#8e1025">Mux + Guard</text><text x="1000" y="136" fill="#5d6f7e">所有权/限幅/许可</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)">
+        <path d="M180,115 L220,115"/><path d="M370,115 L410,115"/><path d="M560,115 L600,115"/><path d="M750,115 L790,115"/><path d="M940,115 L980,115"/>
+      </g>
+      <g stroke="#0b63b6" stroke-width="2" fill="none" stroke-dasharray="6 4"><path d="M40,190 L1140,190"/></g>
+      <text x="40" y="220" font-size="15" fill="#0b63b6">Worker 50 Hz：约 15 ms 预算；超过 20 ms 或 deadline 过期 → 候选作废，不追帧</text>
+      <g stroke="#c8102e" stroke-width="2" fill="none" stroke-dasharray="6 4"><path d="M40,260 L1140,260"/></g>
+      <text x="40" y="290" font-size="15" fill="#c8102e">RT 200 Hz：每 5 ms 读最近有效候选；候选旧/epoch 错/Guard 失败 → 本拍不发正常命令</text>
+      <g font-size="15">
+        <rect x="30" y="330" width="350" height="95" rx="10" fill="#f8fafc" stroke="#d9e2e8"/><text x="50" y="360" font-weight="800">必须放行的检查</text><text x="50" y="386" fill="#5d6f7e">age · epoch · mask · finite</text><text x="50" y="410" fill="#5d6f7e">lease · mode · limit · HAL ack</text>
+        <rect x="410" y="330" width="350" height="95" rx="10" fill="#f8fafc" stroke="#d9e2e8"/><text x="430" y="360" font-weight="800">不能做的事</text><text x="430" y="386" fill="#5d6f7e">RT 不等推理；Worker 不写 HAL；</text><text x="430" y="410" fill="#5d6f7e">不无限重复旧命令；不填零当有效</text>
+        <rect x="790" y="330" width="370" height="95" rx="10" fill="#fff7e8" stroke="#a86512"/><text x="810" y="360" font-weight="800" fill="#7a4b0d">HAL 只认合同</text><text x="810" y="386" fill="#8a5a12">writer/seq/epoch/CRC/deadline；</text><text x="810" y="410" fill="#8a5a12">拒收、断流、watchdog 可独立保护</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>两个周期，不是一条同步链</span><span>09 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这一页把“每拍”拆成 7 个节点。重点不是字段，而是两个时钟：Worker 20 ms 算候选，RT 5 ms 只读+检查+发令。Worker 慢了，RT 不会等；候选过期就丢。HAL 还会再验一次合同，拒收就保护。</aside>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Q2B 切换：预备、提交、稳定" data-chapter="关键时序">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">时序 · 切换</div></div>
+  <h1>Q2B：先准备，再原子提交</h1>
+  <p class="sub">旧 Runner 可退出 ≠ 新 Runner 已接管；提交只在 RT 拍边界发生</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="Q2B 切换时序">
+      <g font-size="15" font-weight="800" fill="#12202c">
+        <rect x="50" y="30" width="160" height="44" rx="8" fill="#f8fafc" stroke="#9fb0bd"/><text x="75" y="58">Task</text>
+        <rect x="270" y="30" width="180" height="44" rx="8" fill="#f8fafc" stroke="#9fb0bd"/><text x="292" y="58">PolicyManager</text>
+        <rect x="510" y="30" width="140" height="44" rx="8" fill="#eaf3ff" stroke="#0b63b6"/><text x="532" y="58">Worker</text>
+        <rect x="710" y="30" width="140" height="44" rx="8" fill="#fff2f4" stroke="#c8102e"/><text x="738" y="58">mc_rt</text>
+        <rect x="910" y="30" width="140" height="44" rx="8" fill="#eef8f7" stroke="#0f7f7a"/><text x="940" y="58">HAL</text>
+      </g>
+      <g stroke="#c3d0da" stroke-width="1.5" stroke-dasharray="5 5">
+        <path d="M130,74 L130,460"/><path d="M360,74 L360,460"/><path d="M580,74 L580,460"/><path d="M780,74 L780,460"/><path d="M980,74 L980,460"/>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="2.2" fill="none" marker-end="url(#ar)">
+        <path d="M130,105 L360,105"/><path d="M360,145 L580,145"/><path d="M580,185 L780,185"/><path d="M780,225 L980,225"/>
+        <path d="M980,265 L780,265"/><path d="M780,305 L780,305"/><path d="M780,345 L980,345"/><path d="M980,385 L780,385"/>
+      </g>
+      <g font-size="13" fill="#5d6f7e">
+        <text x="150" y="98">SetBehavior(q2b)</text><text x="330" y="136" text-anchor="middle" class="edge-label">Graph: Drive→Stop→Q2B→Balance</text><text x="600" y="172" text-anchor="middle" class="edge-label">preload/enter target</text><text x="800" y="212" class="edge-label">PREPARE_EPOCH（异步）</text>
+        <text x="800" y="252" class="edge-label">pending ready</text><text x="800" y="332" class="edge-label">new_epoch first command</text><text x="800" y="372" class="edge-label">ACK active_epoch</text>
+      </g>
+      <g transform="translate(700,270)">
+        <rect x="-160" y="-22" width="440" height="44" rx="8" fill="#fff2f4" stroke="#c8102e" stroke-width="2"/>
+        <text x="-140" y="7" font-size="16" font-weight="800" fill="#8e1025">RT 本地：Decision+支撑+Lease+首候选 → 原子提交</text>
+      </g>
+      <g transform="translate(700,410)">
+        <rect x="-180" y="-22" width="480" height="44" rx="8" fill="#fff7e8" stroke="#a86512" stroke-width="2"/>
+        <text x="-160" y="7" font-size="15" fill="#8a5a12">P0：READY 在 step 前发布；step 故障/挂死仍可能误提交</text>
+      </g>
+      <text x="50" y="440" font-size="14" fill="#5d6f7e">失败分支：任一 guard/ACK/Lease 缺失 → WAIT/保护；新 epoch 首命令拒收 → 不能普通回旧策略。</text>
+      <text x="50" y="468" font-size="14" fill="#8e1025">当前 Q2B/B2Q/Balance 未获 Collie 资产与实机验证，保持 DISABLED。</text>
+    </svg>
+  </div>
+  <div class="foot"><span>切换是事务，不是改一个 enum</span><span>10 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这张图看三件事：先 preload/enter，不夺旧 epoch；HAL 先 PREPARE_EPOCH；RT 在 5 ms 边界只做一次原子提交。旧 Runner 的 READY 不代表新 Runner 接管。底下红字是 P0：READY 在 step 前发布，step 故障/挂死仍可能误提交，这个洞还没修。</aside>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="急停与反馈过期：谁还能保护" data-chapter="关键时序">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">时序 · 安全</div></div>
+  <h1>急停不经过 ONNX</h1>
+  <p class="sub">硬件链先动；Safety 撤许可；RT 不再采纳普通候选；HAL 独立保护</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 430" role="img" aria-label="急停与反馈过期时序">
+      <g font-size="15" font-weight="800">
+        <rect x="50" y="30" width="220" height="44" rx="8" fill="#fff2f4" stroke="#c8102e"/><text x="72" y="58">物理急停 / 传感器</text>
+        <rect x="360" y="30" width="160" height="44" rx="8" fill="#fff7e8" stroke="#a86512"/><text x="400" y="58">mc_safety</text>
+        <rect x="610" y="30" width="140" height="44" rx="8" fill="#fff2f4" stroke="#c8102e"/><text x="640" y="58">mc_rt</text>
+        <rect x="840" y="30" width="220" height="44" rx="8" fill="#eef8f7" stroke="#0f7f7a"/><text x="866" y="58">HAL / driver</text>
+      </g>
+      <g stroke="#c3d0da" stroke-width="1.5" stroke-dasharray="5 5"><path d="M160,74 L160,360"/><path d="M440,74 L440,360"/><path d="M680,74 L680,360"/><path d="M950,74 L950,360"/></g>
+      <g stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)"><path d="M160,110 L950,110"/></g>
+      <text x="180" y="100" font-size="14" fill="#8e1025">① 电气路径直接动作，不等软件</text>
+      <g stroke="#5d6f7e" stroke-width="2.2" fill="none" marker-end="url(#ar)">
+        <path d="M160,155 L440,155"/><path d="M440,195 L680,195"/><path d="M680,235 L680,235"/><path d="M680,275 L950,275"/>
+      </g>
+      <g font-size="14" fill="#5d6f7e">
+        <text x="180" y="148">② fault / invalid feedback</text><text x="460" y="188">③ fault latch / revoke Lease</text><text x="700" y="268">④ 只发获批保护（如果有）</text>
+      </g>
+      <g transform="translate(680,235)"><rect x="-150" y="-22" width="440" height="44" rx="8" fill="#fff2f4" stroke="#c8102e"/><text x="-132" y="7" font-size="15" font-weight="800" fill="#8e1025">RT 不再采纳普通候选；不能无限重复旧命令</text></g>
+      <g transform="translate(950,315)"><rect x="-160" y="-22" width="320" height="44" rx="8" fill="#eef8f7" stroke="#0f7f7a"/><text x="-140" y="7" font-size="15" font-weight="800" fill="#0f7f7a">HAL/驱动独立 watchdog</text></g>
+      <text x="50" y="395" font-size="14" fill="#5d6f7e">即使 RT/Worker 已死，物理链仍须有效【待验证】；SafetyLease 过期是后备，不是主保护。</text>
+    </svg>
+  </div>
+  <div class="foot"><span>软件保护 ≠ 硬件保护</span><span>11 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>急停最先动的是电气/硬件，不是软件。Safety 只是撤许可、锁存；RT 不再采纳普通候选；HAL 和驱动还有独立 watchdog。不要把这套软件层讲成“已经满足功能安全”，硬件链没验证就不能上机。</aside>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="四把钥匙：Session / ControlLease / SafetyLease / HAL writer" data-chapter="权限">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">权限</div></div>
+  <h1>四把钥匙，不能合成一个 boolean</h1>
+  <p class="sub">谁在请求 → 谁拥有运动资源 → 现在允许动吗 → 谁有权写设备</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 460" role="img" aria-label="四把钥匙">
+      <g stroke="#5d6f7e" stroke-width="4" fill="none" marker-end="url(#ar)"><path d="M60,190 L1120,190"/></g>
+      <g font-size="14">
+        <g transform="translate(100,80)">
+          <rect x="-55" y="-45" width="210" height="90" rx="10" fill="#fff7e8" stroke="#a86512" stroke-width="2"/><text x="-35" y="-15" font-size="19" font-weight="800" fill="#7a4b0d">Session</text><text x="-35" y="10" fill="#8a5a12">你是谁</text><text x="-35" y="32" fill="#8a5a12" font-size="12">登录/身份</text>
+        </g>
+        <g transform="translate(380,80)">
+          <rect x="-55" y="-45" width="230" height="90" rx="10" fill="#fff2f4" stroke="#c8102e" stroke-width="2"/><text x="-35" y="-15" font-size="19" font-weight="800" fill="#8e1025">ControlLease</text><text x="-35" y="10" fill="#8e1025">谁拥有运动资源</text><text x="-35" y="32" fill="#8e1025" font-size="12">scope · TTL · seq</text>
+        </g>
+        <g transform="translate(700,80)">
+          <rect x="-55" y="-45" width="230" height="90" rx="10" fill="#fff7e8" stroke="#a86512" stroke-width="2"/><text x="-35" y="-15" font-size="19" font-weight="800" fill="#7a4b0d">SafetyLease</text><text x="-35" y="10" fill="#8a5a12">现在允许动吗</text><text x="-35" y="32" fill="#8a5a12" font-size="12">SafetyKernel 发</text>
+        </g>
+        <g transform="translate(1010,80)">
+          <rect x="-55" y="-45" width="230" height="90" rx="10" fill="#eef8f7" stroke="#0f7f7a" stroke-width="2"/><text x="-35" y="-15" font-size="19" font-weight="800" fill="#0f7f7a">HAL writer</text><text x="-35" y="10" fill="#0f7f7a">谁有权写设备</text><text x="-35" y="32" fill="#0f7f7a" font-size="12">HAL token/OS</text>
+        </g>
+      </g>
+      <g font-size="15" fill="#5d6f7e">
+        <text x="60" y="225">每个检查点都在链路上有唯一位置；前一把钥匙有效，不代表后一把自动有效。</text>
+        <text x="60" y="255">Session 登录 ≠ ControlLease；ControlLease ≠ SafetyLease；SafetyLease ≠ HAL writer。</text>
+      </g>
+      <g>
+        <rect x="60" y="300" width="1080" height="95" rx="12" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="82" y="332" font-size="18" font-weight="800" fill="#12202c">典型失效：</text>
+        <text x="82" y="360" font-size="15" fill="#5d6f7e">登录了但没 ControlLease → 不能改速度；有 ControlLease 但 SafetyLease 过期 → 不能动；</text>
+        <text x="82" y="384" font-size="15" fill="#5d6f7e">有 SafetyLease 但 HAL 不认 writer → 不能写设备。四者必须同时成立。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>四把钥匙 = 四个检查点</span><span>12 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>用钥匙类比：Session 是工牌，ControlLease 是方向盘钥匙，SafetyLease 是安全员放行条，HAL writer 是设备钥匙。四个不是一个 boolean；任何一个失效，正常运动都不能继续。SafetyLease 过期时，有方向盘也不能动。</aside>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="HAL 边界：翻译、拒收、独立保护" data-chapter="设备合同">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">HAL</div></div>
+  <h1>HAL 不是“把数字发给电机”</h1>
+  <p class="sub">它翻译单位/方向，验 writer/seq/epoch/CRC/deadline，并在设备侧独立保护</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 470" role="img" aria-label="HAL 边界">
+      <g font-size="15">
+        <rect x="40" y="80" width="320" height="260" rx="14" fill="#fff2f4" stroke="#c8102e" stroke-width="2"/>
+        <text x="62" y="115" font-size="22" font-weight="850" fill="#8e1025">MC 软件域</text>
+        <text x="62" y="148" fill="#5d6f7e">mc_rt：唯一正常 writer</text>
+        <text x="62" y="175" fill="#5d6f7e">OutputGuard：最后一层限幅</text>
+        <text x="62" y="202" fill="#5d6f7e">JointMux：所有权合成</text>
+        <text x="62" y="229" fill="#5d6f7e">Candidate：epoch/deadline</text>
+        <text x="62" y="280" fill="#8e1025">不在这里做：ONNX 推理、Action 选择、产品意图</text>
+        <rect x="800" y="80" width="360" height="260" rx="14" fill="#eef8f7" stroke="#0f7f7a" stroke-width="2"/>
+        <text x="822" y="115" font-size="22" font-weight="850" fill="#0f7f7a">设备域</text>
+        <text x="822" y="148" fill="#5d6f7e">驱动：电流/总线/物理模式</text>
+        <text x="822" y="175" fill="#5d6f7e">电机/轮：实际受控对象</text>
+        <text x="822" y="202" fill="#5d6f7e">IMU/编码器：原始反馈</text>
+        <text x="822" y="229" fill="#5d6f7e">驱动器独立保护/失联动作</text>
+        <text x="822" y="280" fill="#0f7f7a">不在这里做：读 Manifest、选 Runner、改 Epoch</text>
+        <rect x="400" y="80" width="360" height="260" rx="14" fill="#fff7e8" stroke="#a86512" stroke-width="2"/>
+        <text x="422" y="115" font-size="22" font-weight="850" fill="#7a4b0d">HAL 合同边界</text>
+        <text x="422" y="148" fill="#8a5a12">writer_id / token / OS 身份</text>
+        <text x="422" y="175" fill="#8a5a12">seq / action_epoch / deadline</text>
+        <text x="422" y="202" fill="#8a5a12">CRC32C（只校验完整性）</text>
+        <text x="422" y="229" fill="#8a5a12">ack / reject_reason / watchdog</text>
+        <text x="422" y="256" fill="#8a5a12">PREPARE_EPOCH / PREPARE_MODE</text>
+        <text x="422" y="296" fill="#7a4b0d">它可以拒收，不能替上游“猜意图”</text>
+      </g>
+      <g stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)"><path d="M360,150 L400,150"/></g>
+      <text x="362" y="138" font-size="13" fill="#8e1025">HalCommand</text>
+      <g stroke="#0f7f7a" stroke-width="3" fill="none" marker-end="url(#arTeal)"><path d="M800,250 L760,250"/></g>
+      <text x="735" y="238" font-size="13" fill="#0f7f7a">feedback</text>
+      <g stroke="#a86512" stroke-width="3" fill="none" marker-end="url(#arAmber)"><path d="M400,280 L360,280"/></g>
+      <text x="330" y="300" font-size="13" fill="#8a5a12">ack/reject</text>
+      <g>
+        <rect x="40" y="370" width="1120" height="55" rx="10" fill="#fff7e8" stroke="#e2c58e"/>
+        <text x="62" y="403" font-size="15" fill="#7a4b0d">软件 PASS 不等于硬件安全：15 ms watchdog、HAL_SAFE_OUTPUT、双写拒绝都必须由 HAL/电气 HIL 实测签收。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>HAL 是设备合同，不是 Runner</span><span>13 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>HAL 在中间：左边 MC 给规范目标，右边设备域执行。它做三件事：翻译单位/方向、验 writer/seq/epoch/CRC/deadline、独立拒收/保护。它不做推理、不选 Action、不读 Manifest。软件合同通过不代表硬件 watchdog 真的有效，需要 HIL。</aside>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="安全状态机：从 INIT 开始，不从 HOLD 开始" data-chapter="安全">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">安全</div></div>
+  <h1>从 INIT 开始，不从 HOLD 开始</h1>
+  <p class="sub">未知支撑时不得把“保持当前位置”当成安全动作</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 520" role="img" aria-label="安全状态机">
+      <g font-size="15">
+        <g fill="#fff2f4" stroke="#c8102e" stroke-width="2.5"><rect x="470" y="30" width="260" height="64" rx="32"/></g>
+        <text x="600" y="58" text-anchor="middle" font-size="20" font-weight="850" fill="#8e1025">INIT / UNKNOWN</text>
+        <text x="600" y="80" text-anchor="middle" fill="#8e1025">上电、急停复位</text>
+        <g fill="#fff" stroke="#a86512" stroke-width="2"><rect x="80" y="170" width="230" height="60" rx="30"/></g><text x="195" y="206" text-anchor="middle" font-size="17" font-weight="800" fill="#7a4b0d">DAMPING / HAL_SAFE</text>
+        <g fill="#fff" stroke="#2f7d52" stroke-width="2.5"><rect x="470" y="170" width="260" height="60" rx="30"/></g><text x="600" y="206" text-anchor="middle" font-size="18" font-weight="800" fill="#2f7d52">NORMAL</text>
+        <g fill="#fff" stroke="#a86512" stroke-width="2"><rect x="880" y="170" width="230" height="60" rx="30"/></g><text x="995" y="206" text-anchor="middle" font-size="18" font-weight="800" fill="#7a4b0d">SAFE_HOLD</text>
+        <g fill="#fff" stroke="#a86512" stroke-width="2"><rect x="250" y="320" width="230" height="60" rx="30"/></g><text x="365" y="356" text-anchor="middle" font-size="18" font-weight="800" fill="#7a4b0d">DEGRADED</text>
+        <g fill="#fff2f4" stroke="#c8102e" stroke-width="2.5"><rect x="720" y="320" width="230" height="60" rx="30"/></g><text x="835" y="356" text-anchor="middle" font-size="18" font-weight="800" fill="#8e1025">ESTOP</text>
+        <g fill="#f8fafc" stroke="#5d6f7e" stroke-width="2"><rect x="470" y="440" width="260" height="60" rx="30"/></g><text x="600" y="476" text-anchor="middle" font-size="18" font-weight="800" fill="#12202c">RECOVERY</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="2.4" fill="none" marker-end="url(#ar)">
+        <path d="M530,94 C430,120 340,140 300,170"/><path d="M600,94 L600,170"/><path d="M670,94 C770,120 860,140 900,170"/>
+        <path d="M310,200 L470,200"/><path d="M730,200 L880,200"/>
+        <path d="M600,230 L600,270 L480,270 L480,320"/><path d="M730,230 L730,320"/>
+        <path d="M480,350 L720,350"/><path d="M995,230 L995,280 L950,280 L950,320"/>
+        <path d="M365,380 L470,440"/>
+      </g>
+      <g font-size="13.5" fill="#5d6f7e" class="edge-label">
+        <text x="380" y="132" text-anchor="middle">支撑/反馈不足</text>
+        <text x="612" y="132">显式允许</text>
+        <text x="800" y="132" text-anchor="middle">支撑+姿态可信</text>
+        <text x="390" y="190" text-anchor="middle">自检通过</text>
+        <text x="805" y="190" text-anchor="middle">安全许可</text>
+        <text x="612" y="290">可控异常</text>
+        <text x="742" y="290">严重故障</text>
+        <text x="600" y="342" text-anchor="middle">升级</text>
+        <text x="1007" y="290">失稳</text>
+        <text x="390" y="422" text-anchor="middle">确认后恢复</text>
+      </g>
+      <g font-size="13" fill="#8e1025">
+        <text x="40" y="512">ESTOP → INIT 只能物理复位+维护授权+自检；不得自动回 NORMAL/RECOVERY。Unknown 形态禁 Q2B/B2Q/Balance/Recovery/Overlay。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>状态机有迁移边，不是 5 个卡片</span><span>14 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这里重点讲 INIT：上电不知道姿态/支撑，不能默认 SAFE_HOLD，也不能默认 NORMAL。INIT 先禁用正常输出；支撑/姿态/反馈可信才允许 SAFE_HOLD。ESTOP 只能物理复位+维护授权+自检后回 INIT，不能自动恢复。Q2B/Balance 在 UNKNOWN 下全部禁用。</aside>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="四级配置与一个 Action 的完整文件包" data-chapter="配置资产">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">配置资产</div></div>
+  <h1>一个 Action 不是“放个 onnx”</h1>
+  <p class="sub">本体层 → 系统层 → Action 层 → 策略层 → Release 签名</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 500" role="img" aria-label="四级配置与文件树">
+      <g font-size="14">
+        <rect x="30" y="50" width="220" height="340" rx="12" fill="#fff" stroke="#c8102e" stroke-width="2"/>
+        <text x="52" y="82" font-size="18" font-weight="850" fill="#8e1025">① 本体层</text>
+        <text x="52" y="112" fill="#5d6f7e">RobotDescription</text><text x="52" y="138" fill="#5d6f7e">calibration</text><text x="52" y="164" fill="#8fa0ad">关节名/方向/限位</text>
+        <rect x="280" y="50" width="220" height="340" rx="12" fill="#fff" stroke="#a86512" stroke-width="2"/>
+        <text x="302" y="82" font-size="18" font-weight="850" fill="#7a4b0d">② 系统层</text>
+        <text x="302" y="112" fill="#5d6f7e">action_graph</text><text x="302" y="138" fill="#5d6f7e">velocity_sources</text><text x="302" y="164" fill="#5d6f7e">safety_limits</text><text x="302" y="190" fill="#5d6f7e">deployment</text>
+        <rect x="530" y="50" width="220" height="340" rx="12" fill="#fff" stroke="#0b63b6" stroke-width="2"/>
+        <text x="552" y="82" font-size="18" font-weight="850" fill="#0b63b6">③ Action 层</text>
+        <text x="552" y="112" fill="#5d6f7e">bundles/quad_stop</text><text x="552" y="138" fill="#5d6f7e">manifests/quad_stop</text><text x="552" y="164" fill="#8fa0ad">Primary/owns</text><text x="552" y="190" fill="#8fa0ad">entry/exit/guard</text>
+        <rect x="780" y="50" width="220" height="340" rx="12" fill="#fff" stroke="#0f7f7a" stroke-width="2"/>
+        <text x="802" y="82" font-size="18" font-weight="850" fill="#0f7f7a">④ 策略层</text>
+        <text x="802" y="112" fill="#5d6f7e">model / builtin</text><text x="802" y="138" fill="#5d6f7e">ObsSpec / ActionSpec</text><text x="802" y="164" fill="#5d6f7e">Golden</text><text x="802" y="190" fill="#8fa0ad">逐维配方/回归</text>
+        <rect x="1030" y="50" width="140" height="340" rx="12" fill="#fff7e8" stroke="#a86512" stroke-width="2"/>
+        <text x="1050" y="82" font-size="18" font-weight="850" fill="#7a4b0d">Release</text>
+        <text x="1050" y="112" fill="#8a5a12">签名/SHA</text><text x="1050" y="138" fill="#8a5a12">审批</text><text x="1050" y="164" fill="#8a5a12">A/B 回滚</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M250,220 L280,220"/><path d="M500,220 L530,220"/><path d="M750,220 L780,220"/><path d="M1000,220 L1030,220"/></g>
+      <g font-size="13" fill="#5d6f7e">
+        <text x="30" y="424">加载：Release → Robot → System → Bundle → Manifest → Spec → Golden → AVAILABLE。</text>
+        <text x="30" y="452">缺文件/哈希/审批拒绝；CANDIDATE 不能 ACTIVE。</text>
+      </g>
+      <g font-size="11.5" fill="#5d6f7e">
+        <rect x="620" y="395" width="540" height="105" rx="8" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="636" y="412" font-size="12" font-weight="800" fill="#12202c">release/quad_stop-CANDIDATE/</text>
+        <text x="636" y="428">├─ robot/robot_description.yaml + calibration.yaml</text>
+        <text x="636" y="444">├─ system/{action_graph, velocity_sources, safety_limits}.yaml</text>
+        <text x="636" y="460">├─ bundles/quad_stop.yaml + manifests/quad_stop.yaml</text>
+        <text x="636" y="476">├─ builtin/quad_stop.yaml + specs/*.csv + golden/*</text>
+        <text x="636" y="492">└─ release_manifest.yaml（签名/SHA/审批）</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>四层不是四个 YAML，是一个依赖包</span><span>15 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这页回答“一个 Action 到底要哪些文件”。四层：本体、系统、Action、策略；最后 Release 签名把整套锁住。不是四个 YAML，而是一个依赖树：本体事实、图/限额、Bundle/Manifest、模型/规格/Golden，最后签名审批。缺一项就拒绝，CANDIDATE 不能跑。</aside>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-title="Golden / 黑匣子 / 回放：怎么证明" data-chapter="验证">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">验证</div></div>
+  <h1>Golden 证明“对”，黑匣子证明“当时发生了什么”</h1>
+  <p class="sub">训练/部署逐维对齐；故障前后 30+10 秒可重放</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 430" role="img" aria-label="Golden 与黑匣子回放">
+      <g font-size="15">
+        <rect x="40" y="70" width="220" height="110" rx="12" fill="#eaf3ff" stroke="#0b63b6"/><text x="62" y="104" font-weight="850" fill="#0b63b6">训练导出</text><text x="62" y="132" fill="#5d6f7e">模型 + Obs/ActionSpec</text><text x="62" y="156" fill="#5d6f7e">+ Golden 输入/期望</text>
+        <rect x="310" y="70" width="220" height="110" rx="12" fill="#fff2f4" stroke="#c8102e"/><text x="332" y="104" font-weight="850" fill="#8e1025">部署回放</text><text x="332" y="132" fill="#5d6f7e">同 CPU/fp32</text><text x="332" y="156" fill="#5d6f7e">逐维 diff（如 1e-5）</text>
+        <rect x="580" y="70" width="220" height="110" rx="12" fill="#eef8f7" stroke="#0f7f7a"/><text x="602" y="104" font-weight="850" fill="#0f7f7a">运行时黑匣子</text><text x="602" y="132" fill="#5d6f7e">Snapshot/候选/Guard</text><text x="602" y="156" fill="#5d6f7e">128 MiB ring</text>
+        <rect x="850" y="70" width="300" height="110" rx="12" fill="#fff7e8" stroke="#a86512"/><text x="872" y="104" font-weight="850" fill="#7a4b0d">故障回放</text><text x="872" y="132" fill="#8a5a12">前 30 s + 后 10 s</text><text x="872" y="156" fill="#8a5a12">重算/锁 raw/端到端</text>
+      </g>
+      <g stroke="#5d6f7e" stroke-width="3" fill="none" marker-end="url(#ar)"><path d="M260,125 L310,125"/><path d="M530,125 L580,125"/><path d="M800,125 L850,125"/></g>
+      <g font-size="14" fill="#5d6f7e">
+        <text x="40" y="235">Golden：证明“同一输入，输出逐维一致”；不是安全证明，也不能替代现场日志。</text>
+        <text x="40" y="262">黑匣子：证明“当时 HAL/Worker/RT 看到了什么、发了什么、为什么被拒”；不是磁盘同步日志。</text>
+        <text x="40" y="289">128 MiB 是容量上限，不是无条件回放能力；要按所有活跃模型重算 2.8 MiB/s 准入。</text>
+      </g>
+      <g>
+        <rect x="40" y="320" width="1120" height="62" rx="10" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="62" y="350" font-size="15" fill="#12202c" font-weight="700">36/36 是 SIL/合同/Schema/文本检查；它不能证明真实 HAL watchdog、电机总线失联、动态双足稳定。</text>
+        <text x="62" y="372" font-size="14" fill="#5d6f7e">发布门禁必须分级：Unit → Golden → Graph → Fault → HIL → 限能/封闭真机 → 每条边签收。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>Golden ≠ 安全；SIL ≠ HIL</span><span>16 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>Golden 证明训练/部署逐维对齐；黑匣子证明故障现场。两个不能互相替代。36/36 只是 SIL/合同/Schema/文本检查，别说成系统 HIL。发布门禁是分级：Unit→Golden→Graph→Fault→HIL→真机。</aside>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-title="路线图：先影子，再单动作，再切换" data-chapter="实施">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">实施</div></div>
+  <h1>路线图：先影子，再单动作，再切换</h1>
+  <p class="sub">每一阶段都有退出条件与上机门</p>
+  <div class="body">
+    <svg class="diagram" viewBox="0 0 1200 430" role="img" aria-label="P0 到 P5 路线图">
+      <g stroke="#c3d0da" stroke-width="5" stroke-linecap="round"><path d="M70,190 L1130,190"/></g>
+      <g font-size="14">
+        <g transform="translate(110,190)"><circle r="16" fill="#fff" stroke="#c8102e" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#8e1025">P0 影子</text><text y="48" text-anchor="middle" fill="#5d6f7e">IRunner/IPC/Schema</text><text y="68" text-anchor="middle" fill="#5d6f7e">0 HAL 写</text></g>
+        <g transform="translate(300,190)"><circle r="16" fill="#fff" stroke="#c8102e" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#8e1025">P1 单动作</text><text y="48" text-anchor="middle" fill="#5d6f7e">Stand/Drive 二选一</text><text y="68" text-anchor="middle" fill="#5d6f7e">Golden + HIL</text></g>
+        <g transform="translate(490,190)"><circle r="16" fill="#fff" stroke="#c8102e" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#8e1025">P2 切换/叠加</text><text y="48" text-anchor="middle" fill="#5d6f7e">Graph + Epoch</text><text y="68" text-anchor="middle" fill="#5d6f7e">非法边/回放</text></g>
+        <g transform="translate(680,190)"><circle r="16" fill="#fff" stroke="#c8102e" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#8e1025">P3 安全联锁</text><text y="48" text-anchor="middle" fill="#5d6f7e">Lease/故障注入</text><text y="68" text-anchor="middle" fill="#5d6f7e">杀 RT/Worker</text></g>
+        <g transform="translate(870,190)"><circle r="16" fill="#fff" stroke="#a86512" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#7a4b0d">P4 多形态</text><text y="48" text-anchor="middle" fill="#8a5a12">Q2B/Balance</text><text y="68" text-anchor="middle" fill="#8a5a12">逐 phase 签收</text></g>
+        <g transform="translate(1060,190)"><circle r="16" fill="#fff" stroke="#0f7f7a" stroke-width="3"/><text y="-28" text-anchor="middle" font-size="17" font-weight="850" fill="#0f7f7a">P5 量产</text><text y="48" text-anchor="middle" fill="#5d6f7e">OTA/追溯/合规</text><text y="68" text-anchor="middle" fill="#5d6f7e">灰度/回滚</text></g>
+      </g>
+      <g stroke="#c8102e" stroke-width="3" fill="none" marker-end="url(#arRed)"><path d="M126,190 L284,190"/><path d="M316,190 L474,190"/><path d="M506,190 L664,190"/><path d="M696,190 L854,190"/></g>
+      <g stroke="#a86512" stroke-width="3" fill="none" marker-end="url(#arAmber)"><path d="M886,190 L1044,190"/></g>
+      <g>
+        <rect x="70" y="290" width="500" height="80" rx="10" fill="#fff2f4" stroke="#e6b8c2"/>
+        <text x="90" y="320" font-size="15" font-weight="800" fill="#8e1025">硬门禁：P0 不写 HAL；P1 无 HIL 不实机；P2 双写/旧 Epoch 0 次；</text>
+        <text x="90" y="344" font-size="15" fill="#8e1025">P3 急停/断流/杀进程全过；P4 每个 phase 有退路；P5 逐版本签名。</text>
+        <rect x="600" y="290" width="530" height="80" rx="10" fill="#f8fafc" stroke="#d9e2e8"/>
+        <text x="620" y="320" font-size="15" fill="#5d6f7e">P0–P3 建议 10–11 FTE、80–128 人周；12 周是“资源充足 + 硬件/标定及时”的规划尺度。</text>
+        <text x="620" y="344" font-size="15" fill="#5d6f7e">Q2B/B2Q/双足/Recovery 不在 P0–P3 的实机范围；不要用进度倒逼安全门。</text>
+      </g>
+    </svg>
+  </div>
+  <div class="foot"><span>阶段门不是甘特图装饰</span><span>17 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>路线图看阶段门，不看日期。P0 只影子、0 HAL 写；P1 单动作先 HIL；P2 才切换；P3 安全联锁；P4 才多形态；P5 量产。任何阶段没有证据就不进下一阶段。Q2B/Balance 不要被“演示需要”提前打开。</aside>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-title="已知问题：哪些不能讲成已解决" data-chapter="风险">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">风险</div></div>
+  <h1>哪些不能讲成“已解决”</h1>
+  <p class="sub">评审时主动说出来，比被问出来好</p>
+  <div class="body">
+    <div class="cards">
+      <div class="card warn"><h3>P0 · can_exit 竞态</h3><p>Worker 在 step 前发布 READY；随后 step 挂死/NaN/进入不可中断 phase，RT 仍可能用旧 READY 提交。必须补“READY→挂死/NaN/phase 变更→0 次提交”的测试。</p></div>
+      <div class="card warn"><h3>P1 · ModePlan / Factory / HAL 能力未机器化</h3><p>ModeTransitionPlan、Q2B/B2Q phase、工厂矩阵、HAL 能力表仍有文档/测试硬编码；编码前要补 schema/validator。</p></div>
+      <div class="card warn"><h3>P1 · ExitKind 值差异</h3><p>V1.1 C++ 片段与 proto 的枚举值不一致；编码以 proto 为准，不要手写第二套枚举。</p></div>
+      <div class="card warn"><h3>P1 · Schema 语义缺口</h3><p>UNKNOWN 下 SAFE_HOLD、BUILTIN 带 path、空 tensor/predicates、asset hash 覆盖不足；需要 mcctl 跨字段负例。</p></div>
+      <div class="card"><h3>不能上机</h3><p>Collie 拓扑/标定、双足支撑、Q2B/B2Q 资产、HAL 独立 watchdog、WCET、功能安全、密钥管理都未签收。</p></div>
+      <div class="card ok"><h3>可以做什么</h3><p>可以拆接口/骨架/配置/回放/测试任务；P0 先关闭。不要把“可编码”说成“可上机”。</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>主动暴露风险，评审才有效</span><span>18 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>这页建议主动讲，不要等别人问。P0 是 can_exit 竞态；P1 是 ModePlan/Factory/HAL 能力未机器化、ExitKind 值、Schema 语义。能编码不代表能上机。把“现在不能做什么”讲清楚，评审才会信任“能做什么”。</aside>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-title="Q&A：五个最可能被问的问题" data-chapter="总结">
+  <div class="top"><div class="brand"><span class="mark"></span>COLLIE / MC ARCHITECTURE</div><div class="tag">Q&amp;A</div></div>
+  <h1>五个最可能被问的问题</h1>
+  <p class="sub">一句话答，细节回到 Part/附录</p>
+  <div class="body">
+    <div class="cards">
+      <div class="card"><h3>1. 五个责任区怎么对应四个进程？</h3><p>责任区管语义/所有权，进程管故障隔离，线程管周期；不要求数量一一对应。</p></div>
+      <div class="card"><h3>2. 为什么只有 RT 能写 HAL？</h3><p>一个关节必须在一个有截止、所有权和保护判据的出口做最终决定；其他模块只给候选/许可。</p></div>
+      <div class="card"><h3>3. Worker 20 ms、RT 5 ms 怎么不等待？</h3><p>两边独立 tick；RT 只读当前仍有效的封存候选，没有就降级/保护，不同步等 Worker。</p></div>
+      <div class="card"><h3>4. ControlLease 与 SafetyLease 区别？</h3><p>前者是“谁拥有运动资源”，后者是“此刻允不允许动”；发放者、过期响应不同。</p></div>
+      <div class="card"><h3>5. 36/36 通过为什么不能上机？</h3><p>它们是 SIL/合同/Schema/文本检查，未验证真实驱动、watchdog、急停、动态支撑。</p></div>
+      <div class="card ok"><h3>6. 现在最该做什么？</h3><p>先修 P0 can_exit 竞态，再补 ModePlan/Factory/HAL capability schema，最后才开真实动作边。</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>谢谢 · 讨论从“哪条边能开”开始</span><span>19 / 19</span></div>
+  <aside class="notes"><b>讲者备注：</b>最后用 5 个问题收尾。每个答案不超过两句话，细节指回 Part2/Part3/Part4/附录 A/B。最后一个问题把讨论拉回“先修 P0、再开边”，不要在现场承诺“下周能上机”。</aside>
+</section>
+
+</main>
+
+<div id="progress"></div>
+<div id="hud">
+  <div><button id="prev">←</button><button id="next">→</button> <span id="page">01 / 19</span> · <span id="chapter">开场</span></div>
+  <div><button id="overviewBtn">O 总览</button><button id="notesBtn">N 备注</button><button id="fullBtn">F 全屏</button><button id="printBtn">P 打印</button></div>
+</div>
+<div id="overview"><h2>全部页 · 点击跳转（O 关闭）</h2><div class="grid" id="grid"></div></div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const total = slides.length;
+  let current = 0;
+  const page = document.getElementById('page');
+  const chapter = document.getElementById('chapter');
+  const progress = document.getElementById('progress');
+  const overview = document.getElementById('overview');
+  const grid = document.getElementById('grid');
+  function show(i){
+    current = Math.max(0, Math.min(total-1, i));
+    slides.forEach((s,j)=>{ s.classList.toggle('active', j===current); s.setAttribute('aria-hidden', String(j!==current)); });
+    page.textContent = String(current+1).padStart(2,'0') + ' / ' + total;
+    chapter.textContent = slides[current].dataset.chapter || '';
+    progress.style.width = ((current+1)/total*100) + '%';
+  }
+  function toggleOverview(){ overview.classList.toggle('open'); }
+  slides.forEach((s,i)=>{
+    const b = document.createElement('button');
+    const small = document.createElement('small');
+    small.textContent = String(i+1).padStart(2,'0') + ' · ' + (s.dataset.chapter || '');
+    b.appendChild(small);
+    b.appendChild(document.createTextNode(s.dataset.title || ('Slide ' + (i+1))));
+    b.addEventListener('click', ()=>{ show(i); overview.classList.remove('open'); });
+    grid.appendChild(b);
+  });
+  document.getElementById('prev').addEventListener('click', ()=>show(current-1));
+  document.getElementById('next').addEventListener('click', ()=>show(current+1));
+  document.getElementById('overviewBtn').addEventListener('click', toggleOverview);
+  document.getElementById('notesBtn').addEventListener('click', ()=>document.body.classList.toggle('show-notes'));
+  document.getElementById('fullBtn').addEventListener('click', ()=>{ if(document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.(); });
+  document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+  document.addEventListener('keydown', (e)=>{
+    if(['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+    const k = e.key.toLowerCase();
+    if(overview.classList.contains('open')){ if(k==='escape' || k==='o'){ toggleOverview(); e.preventDefault(); } return; }
+    if(k==='arrowright' || k===' ' || k==='pagedown'){ show(current+1); e.preventDefault(); }
+    else if(k==='arrowleft' || k==='pageup'){ show(current-1); e.preventDefault(); }
+    else if(k==='home'){ show(0); e.preventDefault(); }
+    else if(k==='end'){ show(total-1); e.preventDefault(); }
+    else if(k==='o'){ toggleOverview(); e.preventDefault(); }
+    else if(k==='n'){ document.body.classList.toggle('show-notes'); e.preventDefault(); }
+    else if(k==='p'){ window.print(); e.preventDefault(); }
+    else if(k==='f'){ if(document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.(); e.preventDefault(); }
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

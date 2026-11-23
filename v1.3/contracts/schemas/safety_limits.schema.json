@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Collie Safety Limits V1.1 structural schema (not physical approval)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "robot_id",
+    "release_approved",
+    "physical_limits_signed",
+    "missing_policies",
+    "limit_profiles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.1"
+    },
+    "robot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "release_approved": {
+      "type": "boolean"
+    },
+    "physical_limits_signed": {
+      "type": "boolean"
+    },
+    "missing_policies": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "on_missing"
+        ],
+        "properties": {
+          "on_missing": {
+            "enum": [
+              "INVALIDATE_SNAPSHOT",
+              "USE_TRAINING_DEFAULT",
+              "REPEAT_LAST_WITH_MAX_AGE"
+            ]
+          }
+        }
+      }
+    },
+    "limit_profiles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "approved"
+        ],
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          },
+          "max_position_rad": {
+            "type": "number"
+          },
+          "min_position_rad": {
+            "type": "number"
+          },
+          "max_velocity_radps": {
+            "type": "number",
+            "minimum": 0
+          },
+          "max_torque_nm": {
+            "type": "number",
+            "minimum": 0
+          },
+          "max_kp": {
+            "type": "number",
+            "minimum": 0
+          },
+          "max_kd": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

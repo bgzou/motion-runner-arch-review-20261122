@@ -1,4 +1,4 @@
-# Motion Runner Architecture Review · 2026-11-22
+﻿# Motion Runner Architecture Review · 2026-11-22
 
 > 输入包：为网页版 GPT 提供 **Collie 轮足机器人运控（MC）Runner 框架**完整架构设计所需的架构、接口、真机配置与逆向证据。
 > 目标：让 GPT 产出一份**可评审、可落地、可验收**的软件架构设计，而不是文档润色。
@@ -11,6 +11,8 @@
 4. **[03_EVIDENCE_MAP.md](03_EVIDENCE_MAP.md)** — 每条关键论断的证据与强度。
 5. **[04_OPEN_QUESTIONS.md](04_OPEN_QUESTIONS.md)** — 必须拍板的问题与默认建议。
 6. **[05_GLOSSARY.md](05_GLOSSARY.md)** — 术语表。
+7. **[v1.3/README.md](v1.3/README.md)** — V1.3 50 Hz 频率修订版（全文 + 6 Part + 附录 + 19 页 Deck）。
+8. **[PROMPT_FOR_GPT_V2_RESTRUCTURE.md](PROMPT_FOR_GPT_V2_RESTRUCTURE.md)** — V2 重写任务书：先全貌、再模块、再接口；先只交 Stage 1。
 
 ## 核心问题
 
@@ -42,6 +44,8 @@ evidence/
   model-list/                58 动作/62 执行组/42 RL/34 权重/换乘图统计
   diagrams/                  策略切换/策略链路图
 reference/                   T1 硬件/OS/SDK/参考实现
+v1.3/                        V1.3 50Hz 全文、6 Part、附录、Deck、contracts
+PROMPT_FOR_GPT_V2_RESTRUCTURE.md  V2 重写任务书（先全貌/再模块/再接口）
 MANIFEST.csv                 文件清单 + SHA256
 SHA256SUMS.txt               校验和
 ```

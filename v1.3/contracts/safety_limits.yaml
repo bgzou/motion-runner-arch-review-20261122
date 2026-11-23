@@ -1,0 +1,10 @@
+schema_version: "1.1"
+robot_id: demo16_nonphysical
+release_approved: false
+physical_limits_signed: false
+missing_policies:
+  STRICT_INVALID: {on_missing: INVALIDATE_SNAPSHOT}
+limit_profiles:
+  demo_leg_limit: {approved: false}
+  demo_wheel_limit: {approved: false}
+# No physical limit values are approved. This file MUST fail motion admission.
